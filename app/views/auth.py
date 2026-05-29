@@ -17,6 +17,85 @@ logger = logging.getLogger(__name__)
 
 
 # =============================================================================
+# LOCAL LOGIN (dev fallback — no Neon Auth required)
+# =============================================================================
+
+@auth_bp.route('/login', methods=['POST'])
+def local_login():
+    """Traditional email/password login for local development."""
+    from werkzeug.security import check_password_hash
+    data = request.get_json(silent=True) or request.form
+    email = (data.get('email') or '').strip().lower()
+    password = data.get('password') or ''
+
+    if not email or not password:
+        return jsonify({'error': 'Email and password are required'}), 400
+
+    user = db.session.execute(
+        db.select(User).where(User.email == email)
+    ).scalar_one_or_none()
+
+    # Invited but never activated — prompt them to set a password
+    if user and not user.is_active and not user.password_hash:
+        return jsonify({'error': 'Account not yet activated. Please use the invitation link or contact your administrator.'}), 401
+
+    if not user or not user.is_active or not user.password_hash or not check_password_hash(user.password_hash, password):
+        return jsonify({'error': 'Invalid email or password'}), 401
+
+    auth_service = AuthService()
+    session['user_id'] = user.user_id
+    session['username'] = user.username
+    session['logged_in'] = True
+    session['auth_method'] = 'local'
+    user.update_last_login()
+    db.session.commit()
+
+    redirect_url = auth_service.resolve_post_auth_redirect(user.user_id)
+    return jsonify({'redirect': redirect_url})
+
+
+@auth_bp.route('/activate', methods=['POST'])
+def activate_account():
+    """Activate an invited (placeholder) account by setting a password."""
+    from werkzeug.security import generate_password_hash
+    data = request.get_json(silent=True) or request.form
+    email = (data.get('email') or '').strip().lower()
+    password = data.get('password') or ''
+
+    if not email or not password:
+        return jsonify({'error': 'Email and password are required'}), 400
+
+    if len(password) < 8:
+        return jsonify({'error': 'Password must be at least 8 characters'}), 400
+
+    user = db.session.execute(
+        db.select(User).where(User.email == email)
+    ).scalar_one_or_none()
+
+    if not user:
+        return jsonify({'error': 'No invitation found for this email'}), 404
+
+    if user.is_active and user.password_hash:
+        return jsonify({'error': 'Account already activated. Please log in.'}), 400
+
+    user.password_hash = generate_password_hash(password)
+    user.is_active = True
+    user.email_verified = True
+    db.session.commit()
+
+    auth_service = AuthService()
+    session['user_id'] = user.user_id
+    session['username'] = user.username
+    session['logged_in'] = True
+    session['auth_method'] = 'local'
+    user.update_last_login()
+    db.session.commit()
+
+    redirect_url = auth_service.resolve_post_auth_redirect(user.user_id)
+    return jsonify({'redirect': redirect_url})
+
+
+# =============================================================================
 # LOGIN PAGE
 # =============================================================================
 

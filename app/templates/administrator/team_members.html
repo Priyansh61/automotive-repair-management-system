@@ -32,15 +32,15 @@
                         <i class="ti ti-user-plus text-success"></i>
                         Invite Team Member
                     </h5>
-                    <form method="post" action="#">
+                    <form method="post" action="{{ url_for('administrator.invite_team_member') }}">
                         <div class="row g-3 align-items-end">
                             <div class="col-md-5">
                                 <label class="form-label">Email Address</label>
-                                <input type="email" class="form-control" name="invite_email" placeholder="colleague@example.com" required>
+                                <input type="email" class="form-control" name="email" placeholder="colleague@example.com" required>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">Role</label>
-                                <select class="form-select" name="invite_role" required>
+                                <select class="form-select" name="role" required>
                                     <option value="">Select role...</option>
                                     <option value="administrator">Administrator</option>
                                     <option value="technician">Technician</option>
@@ -124,16 +124,14 @@
                                     </td>
                                     <td>
                                         <div class="d-flex gap-1">
-                                            <form method="post" action="#" class="d-inline">
-                                                <input type="hidden" name="member_id" value="{{ member.id }}">
-                                                <select class="form-select form-select-sm d-inline-block" name="new_role" onchange="this.form.submit()" style="width: auto;">
+                                            <form method="post" action="{{ url_for('administrator.update_member_role', membership_id=member.membership_id) }}" class="d-inline">
+                                                <select class="form-select form-select-sm d-inline-block" name="role" onchange="this.form.submit()" style="width: auto;">
                                                     <option value="administrator" {% if member.role == 'administrator' %}selected{% endif %}>Admin</option>
                                                     <option value="technician" {% if member.role == 'technician' %}selected{% endif %}>Tech</option>
                                                     <option value="viewer" {% if member.role == 'viewer' %}selected{% endif %}>Viewer</option>
                                                 </select>
                                             </form>
-                                            <form method="post" action="#" class="d-inline" onsubmit="return confirm('Remove this team member?');">
-                                                <input type="hidden" name="remove_member_id" value="{{ member.id }}">
+                                            <form method="post" action="{{ url_for('administrator.remove_member', membership_id=member.membership_id) }}" class="d-inline" onsubmit="return confirm('Remove this team member?');">
                                                 <button type="submit" class="btn btn-sm btn-outline-danger">
                                                     <i class="ti ti-user-minus"></i>
                                                 </button>

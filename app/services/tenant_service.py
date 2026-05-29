@@ -111,6 +111,30 @@ class TenantService:
             db.session.rollback()
             return False, ["Failed to create organization"], None
 
+    def _create_placeholder_user(self, email: str) -> Optional[User]:
+        """Create an inactive placeholder user for an invited email address."""
+        try:
+            username = email.split('@')[0]
+            base = username
+            counter = 1
+            while User.find_by_username(username):
+                username = f"{base}{counter}"
+                counter += 1
+
+            user = User(
+                username=username,
+                email=email,
+                password_hash=None,
+                is_active=False,
+                email_verified=False,
+            )
+            db.session.add(user)
+            db.session.flush()  # get user_id without committing
+            return user
+        except Exception as e:
+            self.logger.error(f"Failed to create placeholder user for {email}: {e}")
+            return None
+
     def invite_member(
         self,
         tenant_id: int,
@@ -135,10 +159,12 @@ class TenantService:
             if not tenant:
                 return False, ["Organization not found"], None
 
-            # Find user by email
+            # Find or create a placeholder user for the invited email
             user = User.find_by_email(email)
             if not user:
-                return False, ["User not found. They must register first."], None
+                user = self._create_placeholder_user(email)
+                if not user:
+                    return False, ["Failed to create invitation. Please try again."], None
 
             # Check for existing membership
             existing = db.session.execute(
@@ -238,7 +264,7 @@ class TenantService:
                 invited_by_user = User.find_by_id(m.invited_by) if m.invited_by else None
                 if tenant:
                     results.append({
-                        'membership_id': m.membership_id,
+                        'membership_id': m.id,
                         'tenant_name': tenant.name,
                         'tenant_slug': tenant.slug,
                         'role': m.role,

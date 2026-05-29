@@ -94,7 +94,8 @@ Customer Management - Administrator Portal
                 </div>
                 <div class="card-body p-4">
                     <!-- Search Form -->
-                    <form method="post" action="/administrator_customer_list" class="mb-4">
+                    <form method="post" action="{{ url_for('administrator.administrator_customer_list') }}" class="mb-4">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <div class="row g-3">
                             <div class="col-md-3">
                                 <label class="form-label">Search By</label>
@@ -119,7 +120,8 @@ Customer Management - Administrator Portal
 
                     <!-- Customer List -->
                     <div class="table-responsive">
-                        <form method="post" action="/schedule_job">
+                        <form method="post" action="{{ url_for('administrator.schedule_job') }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <table class="table table-vcenter card-table">
                                 <thead class="table-light">
                                     <tr>
@@ -289,7 +291,9 @@ Customer Management - Administrator Portal
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form action="/add_customer" method="post">
+            <form action="{{ url_for('administrator.add_customer') }}" method="post" onsubmit="console.log('Form submitting to:', this.action);">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <!-- DEBUG: Form action URL = {{ url_for('administrator.add_customer') }} -->
                 <div class="modal-body">
                     <div class="row g-3">
                         <div class="col-md-6">
@@ -333,7 +337,8 @@ Customer Management - Administrator Portal
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form action="/add_service" method="post">
+            <form action="{{ url_for('administrator.add_service') }}" method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <div class="row g-3">
                         <div class="col-12">
@@ -395,7 +400,8 @@ Customer Management - Administrator Portal
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form action="/add_part" method="post">
+            <form action="{{ url_for('administrator.add_part') }}" method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                     <div class="row g-3">
                         <div class="col-12">

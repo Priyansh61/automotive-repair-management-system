@@ -62,6 +62,12 @@ const RepairOSApp = {
         const form = event.target;
         const submitBtn = form.querySelector('button[type="submit"]');
 
+        console.log('Form submit event triggered', {
+            action: form.action,
+            method: form.method,
+            formData: new FormData(form)
+        });
+
         if (submitBtn && !form.dataset.noLoadingState) {
             this.showFormLoading(submitBtn);
 
@@ -73,8 +79,11 @@ const RepairOSApp = {
 
         // Validate form before submission
         if (!this.validateForm(form)) {
+            console.log('Form validation FAILED - preventing submission');
             event.preventDefault();
             this.hideFormLoading(submitBtn);
+        } else {
+            console.log('Form validation PASSED - allowing submission');
         }
     },
 
@@ -103,25 +112,39 @@ const RepairOSApp = {
     validateForm(form) {
         const inputs = form.querySelectorAll('[required]');
         let isValid = true;
+        let errors = [];
 
         inputs.forEach(input => {
             if (!input.value.trim()) {
-                this.showFieldError(input, 'This field is required');
+                const fieldName = input.name || 'This field';
+                const errorMsg = `${fieldName.replace(/_/g, ' ')} is required`;
+                this.showFieldError(input, errorMsg);
+                errors.push(errorMsg);
                 isValid = false;
             } else {
                 this.clearFieldError(input);
 
                 if (input.type === 'email' && !this.isValidEmail(input.value)) {
-                    this.showFieldError(input, 'Please enter a valid email address');
+                    const errorMsg = 'Please enter a valid email address';
+                    this.showFieldError(input, errorMsg);
+                    errors.push(errorMsg);
                     isValid = false;
                 }
 
-                if (input.type === 'tel' && !this.isValidPhone(input.value)) {
-                    this.showFieldError(input, 'Please enter a valid phone number');
+                if (input.type === 'tel' && input.value.trim() && !this.isValidPhone(input.value)) {
+                    const errorMsg = 'Please enter a valid phone number';
+                    this.showFieldError(input, errorMsg);
+                    errors.push(errorMsg);
                     isValid = false;
                 }
             }
         });
+
+        if (!isValid) {
+            console.log('Form validation failed:', errors);
+            // Show toast notification with first error
+            this.showToast(errors[0] || 'Please fix the form errors', 'error');
+        }
 
         return isValid;
     },
@@ -129,20 +152,37 @@ const RepairOSApp = {
     showFieldError(input, message) {
         input.classList.add('is-invalid');
 
-        let feedback = input.parentNode.querySelector('.invalid-feedback');
+        // Find the right container for the error message
+        // Handle input-group cases (like phone with prefix)
+        let container = input.parentNode;
+        if (container.classList.contains('input-group')) {
+            container = container.parentNode;
+        }
+
+        let feedback = container.querySelector('.invalid-feedback');
         if (!feedback) {
             feedback = document.createElement('div');
-            feedback.className = 'invalid-feedback';
-            input.parentNode.appendChild(feedback);
+            feedback.className = 'invalid-feedback d-block';
+            feedback.style.display = 'block';
+            container.appendChild(feedback);
         }
         feedback.textContent = message;
+        feedback.style.display = 'block';
     },
 
     clearFieldError(input) {
         input.classList.remove('is-invalid');
-        const feedback = input.parentNode.querySelector('.invalid-feedback');
+        
+        // Find the right container for the error message
+        let container = input.parentNode;
+        if (container.classList.contains('input-group')) {
+            container = container.parentNode;
+        }
+        
+        const feedback = container.querySelector('.invalid-feedback');
         if (feedback) {
             feedback.textContent = '';
+            feedback.style.display = 'none';
         }
     },
 
@@ -635,8 +675,11 @@ const RepairOSApp = {
     },
 
     isValidPhone(phone) {
-        const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
-        return phoneRegex.test(phone.replace(/[\s\-\(\)]/g, ''));
+        // Remove all non-digit characters except +
+        const cleaned = phone.replace(/[\s\-\(\)\.]/g, '');
+        // Accept phone numbers with 7-15 digits, optionally starting with +
+        const phoneRegex = /^[\+]?[\d]{7,15}$/;
+        return phoneRegex.test(cleaned);
     },
 
     formatCurrency(amount) {

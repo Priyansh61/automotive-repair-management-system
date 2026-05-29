@@ -103,34 +103,29 @@ def customer_list(page=1, per_page=20):
         elif filter_type == 'overdue':
             customers = customer_service.get_customers_with_filter(has_overdue=True)
         elif search_query:
-            customers_obj = customer_service.search_customers(search_query)
-            customers = [c.to_dict() for c in customers_obj]
-            # Add statistics info
-            for customer in customers:
-                customer['total_unpaid'] = customer_service.get_customer_by_id(customer['customer_id']).get_total_unpaid_amount()
-                customer['has_overdue'] = customer_service.get_customer_by_id(customer['customer_id']).has_overdue_bills()
+            customers = customer_service.search_customers(search_query)
         else:
-            customers_obj = customer_service.get_all_customers()
-            customers = []
-            for c in customers_obj:
-                customer_data = c.to_dict()
-                customer_data['total_unpaid'] = c.get_total_unpaid_amount()
-                customer_data['has_overdue'] = c.has_overdue_bills()
-                customers.append(customer_data)
+            customers = customer_service.get_all_customers()
 
-        # Simple pagination
-        total = len(customers)
-        start = (page - 1) * per_page
-        end = start + per_page
-        customers_page = customers[start:end]
-        total_pages = (total + per_page - 1) // per_page
+        # Get jobs, services, and parts for the page
+        jobs = job_service.get_all_jobs_with_customer_info()
+        
+        from app.models.service import Service
+        from app.models.part import Part
+        from app.extensions import db
+        
+        tenant_id = session.get('current_tenant_id') or getattr(g, 'current_tenant_id', None)
+        g.current_tenant_id = tenant_id
+        
+        services = Service.get_all_sorted()
+        parts = Part.get_all_sorted()
 
         return render_template('administrator/customer_list.html',
-                             customers=customers_page,
-                             page=page,
-                             per_page=per_page,
-                             total=total,
-                             total_pages=total_pages,
+                             customers=customers,
+                             jobs=jobs,
+                             services=services,
+                             parts=parts,
+                             today=date.today().isoformat(),
                              filter_type=filter_type,
                              search_query=search_query)
 
@@ -139,12 +134,213 @@ def customer_list(page=1, per_page=20):
         flash('Failed to load customer list', 'error')
         return render_template('administrator/customer_list.html',
                              customers=[],
-                             page=1,
-                             per_page=per_page,
-                             total=0,
-                             total_pages=0,
+                             jobs=[],
+                             services=[],
+                             parts=[],
+                             today=date.today().isoformat(),
                              filter_type='all',
                              search_query='')
+
+
+@administrator_bp.route('/administrator_customer_list', methods=['POST'])
+@handle_database_errors
+def administrator_customer_list():
+    """Handle customer search from administrator page"""
+    redirect_response = require_admin_login()
+    if redirect_response:
+        return redirect_response
+
+    try:
+        search_field = sanitize_input(request.form.get('customer_search', ''))
+        search_text = sanitize_input(request.form.get('search_text', ''))
+
+        if search_field and search_text:
+            customers = customer_service.search_customers(search_text, search_field)
+        else:
+            customers = customer_service.get_all_customers()
+
+        # Get jobs, services, and parts for the page
+        jobs = job_service.get_all_jobs_with_customer_info()
+        
+        from app.models.service import Service
+        from app.models.part import Part
+        from app.extensions import db
+        
+        tenant_id = session.get('current_tenant_id') or getattr(g, 'current_tenant_id', None)
+        g.current_tenant_id = tenant_id
+        
+        services = Service.get_all_sorted()
+        parts = Part.get_all_sorted()
+
+        return render_template('administrator/customer_list.html',
+                             customers=customers,
+                             jobs=jobs,
+                             services=services,
+                             parts=parts,
+                             today=date.today().isoformat())
+
+    except Exception as e:
+        logger.error(f"Customer search failed: {e}")
+        flash('Search failed', 'error')
+        return redirect(url_for('administrator.customer_list'))
+
+
+@administrator_bp.route('/add_customer', methods=['POST'])
+@handle_database_errors
+def add_customer():
+    """Add new customer from administrator page"""
+    redirect_response = require_admin_login()
+    if redirect_response:
+        return redirect_response
+
+    # Set tenant context
+    tenant_id = session.get('current_tenant_id') or getattr(g, 'current_tenant_id', None)
+    if tenant_id:
+        g.current_tenant_id = tenant_id
+
+    try:
+        customer_data = {
+            'first_name': sanitize_input(request.form.get('first_name', '')),
+            'family_name': sanitize_input(request.form.get('family_name', '')),
+            'email': sanitize_input(request.form.get('email', '')),
+            'phone': sanitize_input(request.form.get('phone', ''))
+        }
+
+        success, errors, customer = customer_service.create_customer(customer_data)
+
+        if success:
+            flash(f'Customer {customer.full_name} added successfully!', 'success')
+        else:
+            for error in errors:
+                flash(error, 'error')
+
+    except Exception as e:
+        logger.error(f"Failed to add customer: {e}")
+        flash('Failed to add customer', 'error')
+
+    return redirect(url_for('administrator.customer_list'))
+
+
+@administrator_bp.route('/add_service', methods=['POST'])
+@handle_database_errors
+def add_service():
+    """Add new service from administrator page"""
+    redirect_response = require_admin_login()
+    if redirect_response:
+        return redirect_response
+
+    from app.models.service import Service
+    from app.extensions import db
+
+    tenant_id = session.get('current_tenant_id') or getattr(g, 'current_tenant_id', None)
+
+    try:
+        data = {
+            'service_name': sanitize_input(request.form.get('service_name', '')),
+            'cost': request.form.get('service_cost'),
+        }
+        
+        validation = validate_service_data(data)
+        if not validation.is_valid:
+            for error in validation.get_errors():
+                flash(error, 'error')
+        else:
+            service = Service(
+                tenant_id=tenant_id,
+                service_name=data['service_name'],
+                cost=float(data['cost']),
+                is_active=True,
+            )
+            db.session.add(service)
+            db.session.commit()
+            flash(f'Service "{data["service_name"]}" added successfully!', 'success')
+
+    except Exception as e:
+        logger.error(f"Failed to add service: {e}")
+        db.session.rollback()
+        flash('Failed to add service', 'error')
+
+    return redirect(url_for('administrator.customer_list'))
+
+
+@administrator_bp.route('/add_part', methods=['POST'])
+@handle_database_errors
+def add_part():
+    """Add new part from administrator page"""
+    redirect_response = require_admin_login()
+    if redirect_response:
+        return redirect_response
+
+    from app.models.part import Part
+    from app.extensions import db
+
+    tenant_id = session.get('current_tenant_id') or getattr(g, 'current_tenant_id', None)
+
+    try:
+        data = {
+            'part_name': sanitize_input(request.form.get('part_name', '')),
+            'cost': request.form.get('part_cost'),
+        }
+        
+        validation = validate_part_data(data)
+        if not validation.is_valid:
+            for error in validation.get_errors():
+                flash(error, 'error')
+        else:
+            part = Part(
+                tenant_id=tenant_id,
+                part_name=data['part_name'],
+                cost=float(data['cost']),
+                is_active=True,
+            )
+            db.session.add(part)
+            db.session.commit()
+            flash(f'Part "{data["part_name"]}" added successfully!', 'success')
+
+    except Exception as e:
+        logger.error(f"Failed to add part: {e}")
+        db.session.rollback()
+        flash('Failed to add part', 'error')
+
+    return redirect(url_for('administrator.customer_list'))
+
+
+@administrator_bp.route('/schedule_job', methods=['POST'])
+@handle_database_errors
+def schedule_job():
+    """Schedule a job for selected customer"""
+    redirect_response = require_admin_login()
+    if redirect_response:
+        return redirect_response
+
+    try:
+        customer_id = request.form.get('customer_select', type=int)
+        job_date_str = sanitize_input(request.form.get('job_date', ''))
+
+        if not customer_id:
+            flash('Please select a customer', 'error')
+            return redirect(url_for('administrator.customer_list'))
+
+        if not job_date_str:
+            flash('Please select a job date', 'error')
+            return redirect(url_for('administrator.customer_list'))
+
+        job_date = date.fromisoformat(job_date_str)
+        success, errors, job_id = customer_service.schedule_job_for_customer(customer_id, job_date)
+
+        if success:
+            flash(f'Job scheduled successfully! Job ID: {job_id}', 'success')
+        else:
+            for error in errors:
+                flash(error, 'error')
+
+    except ValueError as e:
+        flash('Invalid date format', 'error')
+    except Exception as e:
+        logger.error(f"Failed to schedule job: {e}")
+        flash('Failed to schedule job', 'error')
+
+    return redirect(url_for('administrator.customer_list'))
 
 
 @administrator_bp.route('/billing')
@@ -625,6 +821,72 @@ def invite_team_member():
     else:
         for error in errors:
             flash(error, 'error')
+
+    return redirect(url_for('administrator.team_members'))
+
+
+@administrator_bp.route('/team/member/<int:membership_id>/role', methods=['POST'])
+@handle_database_errors
+def update_member_role(membership_id):
+    """Change a team member's role"""
+    redirect_response = require_admin_login()
+    if redirect_response:
+        return redirect_response
+
+    from app.models.tenant_membership import TenantMembership
+    from app.extensions import db
+
+    tenant_id = session.get('current_tenant_id') or getattr(g, 'current_tenant_id', None)
+    role = sanitize_input(request.form.get('role', ''))
+
+    membership = db.session.execute(
+        db.select(TenantMembership).where(
+            TenantMembership.id == membership_id,
+            TenantMembership.tenant_id == tenant_id,
+        )
+    ).scalar_one_or_none()
+
+    if not membership:
+        flash('Member not found', 'error')
+    elif role not in TenantMembership.VALID_ROLES:
+        flash('Invalid role', 'error')
+    else:
+        membership.role = role
+        db.session.commit()
+        flash('Role updated', 'success')
+
+    return redirect(url_for('administrator.team_members'))
+
+
+@administrator_bp.route('/team/member/<int:membership_id>/remove', methods=['POST'])
+@handle_database_errors
+def remove_member(membership_id):
+    """Remove a team member"""
+    redirect_response = require_admin_login()
+    if redirect_response:
+        return redirect_response
+
+    from app.models.tenant_membership import TenantMembership
+    from app.extensions import db
+
+    tenant_id = session.get('current_tenant_id') or getattr(g, 'current_tenant_id', None)
+    current_user_id = session.get('user_id')
+
+    membership = db.session.execute(
+        db.select(TenantMembership).where(
+            TenantMembership.id == membership_id,
+            TenantMembership.tenant_id == tenant_id,
+        )
+    ).scalar_one_or_none()
+
+    if not membership:
+        flash('Member not found', 'error')
+    elif membership.user_id == current_user_id:
+        flash('You cannot remove yourself', 'error')
+    else:
+        db.session.delete(membership)
+        db.session.commit()
+        flash('Team member removed', 'success')
 
     return redirect(url_for('administrator.team_members'))
 

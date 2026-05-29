@@ -204,6 +204,38 @@
                     </form>
                 </div>
 
+                <!-- Activate Account Panel (shown when invited user tries to sign in) -->
+                <div id="activate-panel" class="d-none">
+                    <div class="alert alert-info mb-3 d-flex align-items-start gap-2">
+                        <i class="ti ti-mail-forward mt-1"></i>
+                        <span>You've been invited! Set a password to activate your account.</span>
+                    </div>
+                    <form id="activateForm" novalidate>
+                        <input type="hidden" id="activate-email">
+                        <div class="mb-3">
+                            <label class="form-label">New Password</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0"><i class="ti ti-lock text-muted"></i></span>
+                                <input type="password" class="form-control border-start-0 ps-0" id="activate-password" placeholder="Min. 8 characters" required minlength="8">
+                                <button type="button" class="btn btn-outline-secondary border-start-0 toggle-password" data-target="activate-password" title="Show/Hide">
+                                    <i class="ti ti-eye text-muted"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label">Confirm Password</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0"><i class="ti ti-lock-check text-muted"></i></span>
+                                <input type="password" class="form-control border-start-0 ps-0" id="activate-confirm" placeholder="Re-enter password" required minlength="8">
+                            </div>
+                        </div>
+                        <button type="submit" id="activateBtn" class="btn btn-success w-100 py-3 fw-semibold mb-2">
+                            <i class="ti ti-check me-2"></i>Activate &amp; Sign In
+                        </button>
+                        <button type="button" id="activateCancelBtn" class="btn btn-link w-100 text-muted">Back to Sign In</button>
+                    </form>
+                </div>
+
                 <!-- System Info -->
                 <div class="mt-4 p-3 bg-light border-start border-4 border-primary rounded">
                     <h6 class="text-primary mb-2 d-flex align-items-center gap-2">
@@ -397,16 +429,34 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        if (!window.neonAuth) {
-            showMessage('Authentication service not configured.', 'error');
-            return;
-        }
-
         setLoading(btn, true);
         try {
-            const result = await window.neonAuth.signInWithEmailPassword(email, password);
-            if (result.success) {
-                window.location.href = result.redirect;
+            if (window.neonAuth) {
+                const result = await window.neonAuth.signInWithEmailPassword(email, password);
+                if (result.success) {
+                    window.location.href = result.redirect;
+                    return;
+                }
+            }
+            // Fallback: local auth (dev mode / no Neon Auth configured)
+            const resp = await fetch('/auth/login', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({email, password})
+            });
+            const data = await resp.json();
+            if (resp.ok && data.redirect) {
+                window.location.href = data.redirect;
+            } else if (data.error && data.error.includes('not yet activated')) {
+                // Show activation panel for invited users
+                document.getElementById('activate-email').value = email;
+                document.getElementById('signin-content').classList.add('d-none');
+                document.getElementById('activate-panel').classList.remove('d-none');
+                hideMessage();
+                setLoading(btn, false);
+            } else {
+                showMessage(data.error || 'Invalid email or password.', 'error');
+                setLoading(btn, false);
             }
         } catch (error) {
             showMessage(error.message || 'Invalid email or password.', 'error');
@@ -547,6 +597,52 @@ document.addEventListener('DOMContentLoaded', function() {
             showVerifyMessage(error.message || 'Invalid code. Please try again.', 'error');
             setLoading(btn, false);
         }
+    });
+
+    // Activate Account Form
+    document.getElementById('activateForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        hideMessage();
+        const email = document.getElementById('activate-email').value;
+        const password = document.getElementById('activate-password').value;
+        const confirm = document.getElementById('activate-confirm').value;
+        const btn = document.getElementById('activateBtn');
+
+        if (password !== confirm) {
+            showMessage('Passwords do not match.', 'error');
+            return;
+        }
+        if (password.length < 8) {
+            showMessage('Password must be at least 8 characters.', 'error');
+            return;
+        }
+
+        setLoading(btn, true);
+        try {
+            const resp = await fetch('/auth/activate', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({email, password})
+            });
+            const data = await resp.json();
+            if (resp.ok && data.redirect) {
+                window.location.href = data.redirect;
+            } else {
+                showMessage(data.error || 'Activation failed. Please try again.', 'error');
+                setLoading(btn, false);
+            }
+        } catch (error) {
+            showMessage('Activation failed. Please try again.', 'error');
+            setLoading(btn, false);
+        }
+    });
+
+    document.getElementById('activateCancelBtn').addEventListener('click', function() {
+        document.getElementById('activate-panel').classList.add('d-none');
+        document.getElementById('signin-content').classList.remove('d-none');
+        document.getElementById('activate-password').value = '';
+        document.getElementById('activate-confirm').value = '';
+        hideMessage();
     });
 
     // Resend Code with cooldown

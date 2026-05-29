@@ -5,6 +5,8 @@ For local development use
 """
 import os
 import logging
+from dotenv import load_dotenv
+load_dotenv()
 from app import create_app
 
 # Setup logging

@@ -2,9 +2,12 @@
 Main Routes Blueprint
 Contains home page, login, public functionality routes
 """
-from flask import Blueprint, render_template, request, flash, redirect, url_for, jsonify, session
+from flask import Blueprint, render_template, request, flash, redirect, url_for, jsonify, session, g
 from datetime import date
 import logging
+import re
+from app.models.customer import Customer
+from app.extensions import db as _db
 from app.services.customer_service import CustomerService
 from app.services.job_service import JobService
 from app.services.billing_service import BillingService
@@ -216,43 +219,50 @@ def new_customer():
 @handle_database_errors
 def create_customer():
     """Create new customer"""
-    # Get form data
+    tenant_id = session.get('current_tenant_id') or getattr(g, 'current_tenant_id', None)
+
+    raw_phone = sanitize_input(request.form.get('phone', ''))
+    clean_phone = re.sub(r'\D', '', raw_phone)
     customer_data = {
         'first_name': sanitize_input(request.form.get('first_name', '')),
         'family_name': sanitize_input(request.form.get('family_name', '')),
         'email': sanitize_input(request.form.get('email', '')),
-        'phone': sanitize_input(request.form.get('phone', ''))
+        'phone': clean_phone,
+        'tenant_id': tenant_id,
     }
-    
+
     try:
-        # Validate data
         validation_result = validate_customer_data(customer_data)
         if not validation_result.is_valid:
             for error in validation_result.get_errors():
                 flash(error, 'error')
-            return render_template('customers/form.html',
-                                 customer=customer_data,
-                                 action='create')
-        
-        # Create customer
+            return render_template('customers/form.html', customer=customer_data, action='create')
+
+        # Check duplicate email within tenant
+        existing = _db.session.execute(
+            _db.select(Customer).where(
+                Customer.tenant_id == tenant_id,
+                Customer.email == customer_data['email'],
+            )
+        ).scalar_one_or_none()
+        if existing:
+            flash(f"A customer with email {customer_data['email']} already exists.", 'error')
+            return render_template('customers/form.html', customer=customer_data, action='create')
+
         success, errors, customer = customer_service.create_customer(customer_data)
-        
+
         if success:
-            flash(f'Customer {customer.full_name} created successfully!', 'success')
+            flash(f'Customer {customer.full_name} added successfully!', 'success')
             return redirect(url_for('main.customers'))
         else:
             for error in errors:
                 flash(error, 'error')
-            return render_template('customers/form.html',
-                                 customer=customer_data,
-                                 action='create')
-            
+            return render_template('customers/form.html', customer=customer_data, action='create')
+
     except Exception as e:
         logger.error(f"Failed to create customer: {e}")
         flash('Failed to create customer, please try again later', 'error')
-        return render_template('customers/form.html',
-                             customer=customer_data,
-                             action='create')
+        return render_template('customers/form.html', customer=customer_data, action='create')
 
 
 @main_bp.route('/customers/<int:customer_id>')
@@ -303,14 +313,17 @@ def edit_customer(customer_id):
 @handle_database_errors
 def update_customer(customer_id):
     """Update customer information"""
-    # Get form data
+    raw_phone = sanitize_input(request.form.get('phone', ''))
+    clean_phone = re.sub(r'\D', '', raw_phone)
+    tenant_id = session.get('current_tenant_id') or getattr(g, 'current_tenant_id', None)
     customer_data = {
         'first_name': sanitize_input(request.form.get('first_name', '')),
         'family_name': sanitize_input(request.form.get('family_name', '')),
         'email': sanitize_input(request.form.get('email', '')),
-        'phone': sanitize_input(request.form.get('phone', ''))
+        'phone': clean_phone,
+        'tenant_id': tenant_id,
     }
-    
+
     try:
         # Validate data
         validation_result = validate_customer_data(customer_data)

@@ -25,7 +25,7 @@ class Customer(db.Model, BaseModelMixin, TenantScopedMixin):
     first_name: Mapped[Optional[str]] = mapped_column(String(25), nullable=True)
     family_name: Mapped[str] = mapped_column(String(25), nullable=False)
     email: Mapped[str] = mapped_column(String(320), nullable=False)
-    phone: Mapped[str] = mapped_column(String(11), nullable=False)
+    phone: Mapped[str] = mapped_column(String(10), nullable=False)
 
     # Relationships
     jobs: Mapped[List["Job"]] = relationship("Job", back_populates="customer_rel", lazy="dynamic")

@@ -1,50 +1,30 @@
-<div class="toast-container position-fixed bottom-0 end-0 p-3">
-    <!-- Toast messages will be appended here by JavaScript -->
-</div>
+<div class="toast-container position-fixed top-0 start-50 translate-middle-x p-3" style="z-index: 9999; margin-top: 1rem;"></div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const toastContainer = document.querySelector('.toast-container');
+(function() {
+    var messages = {{ get_flashed_messages(with_categories=true) | tojson | safe }};
+    if (!messages.length) return;
 
-        // Function to show a toast
-        window.showToast = function(message, type = 'info', delay = 5000) {
-            const toastId = 'toast-' + Date.now();
-            const toastHtml = `
-                <div id="${toastId}" class="toast align-items-center text-white bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="${delay}">
-                    <div class="d-flex">
-                        <div class="toast-body">
-                            ${message}
-                        </div>
-                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-                    </div>
-                </div>
-            `;
-            toastContainer.insertAdjacentHTML('beforeend', toastHtml);
-            const toastEl = document.getElementById(toastId);
-            const toast = new bootstrap.Toast(toastEl);
-            toast.show();
+    var container = document.querySelector('.toast-container');
+    var icons = { success: 'ti-circle-check', danger: 'ti-alert-circle', warning: 'ti-alert-triangle', info: 'ti-info-circle' };
 
-            toastEl.addEventListener('hidden.bs.toast', function () {
-                toastEl.remove();
-            });
-        };
+    window.showToast = function(message, type, delay) {
+        type = type || 'info';
+        delay = delay || 8000;
+        var icon = icons[type] || 'ti-info-circle';
+        var el = document.createElement('div');
+        el.className = 'toast align-items-center text-white bg-' + type + ' border-0 shadow';
+        el.setAttribute('role', 'alert');
+        el.innerHTML = '<div class="d-flex align-items-center p-1"><div class="toast-body d-flex align-items-center gap-2 fw-medium"><i class="ti ' + icon + ' fs-5"></i>' + message + '</div><button type="button" class="btn-close btn-close-white me-2 ms-auto" data-bs-dismiss="toast"></button></div>';
+        container.appendChild(el);
+        var t = new bootstrap.Toast(el, { delay: delay });
+        t.show();
+        el.addEventListener('hidden.bs.toast', function() { el.remove(); });
+    };
 
-        // Handle Flask flashed messages
-        const flashedMessages = JSON.parse('{{ get_flashed_messages(with_categories=true) | tojson | safe }}');
-        flashedMessages.forEach(function(categoryMessage) {
-            const category = categoryMessage[0];
-            const message = categoryMessage[1];
-            let type = 'info'; // Default type
-
-            if (category === 'success') {
-                type = 'success';
-            } else if (category === 'error') {
-                type = 'danger'; // Bootstrap uses 'danger' for errors
-            } else if (category === 'warning') {
-                type = 'warning';
-            }
-
-            showToast(message, type);
-        });
+    messages.forEach(function(pair) {
+        var type = pair[0] === 'error' ? 'danger' : (pair[0] || 'info');
+        showToast(pair[1], type);
     });
+})();
 </script>

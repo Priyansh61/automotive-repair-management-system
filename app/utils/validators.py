@@ -40,8 +40,8 @@ def validate_phone(phone: str) -> bool:
     # Remove spaces and hyphens
     clean_phone = phone.replace(' ', '').replace('-', '').replace('(', '').replace(')', '')
 
-    # Check if it's 10-11 digits
-    pattern = r'^\d{10,11}$'
+    # Indian mobile numbers: exactly 10 digits
+    pattern = r'^\d{10}$'
     return bool(re.match(pattern, clean_phone))
 
 

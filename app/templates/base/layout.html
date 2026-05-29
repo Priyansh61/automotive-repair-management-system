@@ -261,9 +261,6 @@
         {% endif %}
         {% endblock %}
 
-        <!-- Toast Notifications -->
-        {% include 'components/toast_notifications.html' %}
-
         <!-- Page Content -->
         <div class="page-body" id="main-content">
             <div class="container-xl py-4">
@@ -316,7 +313,9 @@
     </footer>
 
     <!-- JavaScript Libraries -->
-    <!-- Tabler JS (includes Bootstrap) -->
+    <!-- Bootstrap JS (exposes window.bootstrap for Toast/Modal APIs) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Tabler JS -->
     <script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.4.0/dist/js/tabler.min.js"></script>
 
     <!-- Moment.js for date handling -->
@@ -333,6 +332,9 @@
 
     <!-- Page-specific JavaScript -->
     {% block extra_js %}{% endblock %}
+
+    <!-- Flash Notifications (must be after Bootstrap/Tabler JS) -->
+    {% include 'components/toast_notifications.html' %}
 
     <!-- Global Search Functionality -->
     <script>
