@@ -236,7 +236,7 @@ Customer Management - Administrator Portal
                                         </span>
                                     </td>
                                     <td>
-                                        <span class="fw-bold text-success">${{ "%.2f"|format(job.total_cost|float) }}</span>
+                                        <span class="fw-bold text-success">{{ currency_symbol }}{{ "%.2f"|format(job.total_cost|float) }}</span>
                                     </td>
                                     <td>
                                         {% if job.completed == 1 %}
@@ -348,7 +348,7 @@ Customer Management - Administrator Portal
                         <div class="col-12">
                             <label class="form-label">Service Cost *</label>
                             <div class="input-group">
-                                <span class="input-group-text">$</span>
+                                <span class="input-group-text">{{ currency_symbol }}</span>
                                 <input type="number" class="form-control" name="service_cost" step="0.01" min="0" required placeholder="0.00">
                             </div>
                         </div>
@@ -369,7 +369,7 @@ Customer Management - Administrator Portal
                                     {% for service in services %}
                                     <tr>
                                         <td>{{ service.service_name }}</td>
-                                        <td>${{ "%.2f"|format(service.cost|float) }}</td>
+                                        <td>{{ currency_symbol }}{{ "%.2f"|format(service.cost|float) }}</td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>
@@ -411,7 +411,7 @@ Customer Management - Administrator Portal
                         <div class="col-12">
                             <label class="form-label">Part Cost *</label>
                             <div class="input-group">
-                                <span class="input-group-text">$</span>
+                                <span class="input-group-text">{{ currency_symbol }}</span>
                                 <input type="number" class="form-control" name="part_cost" step="0.01" min="0" required placeholder="0.00">
                             </div>
                         </div>
@@ -432,7 +432,7 @@ Customer Management - Administrator Portal
                                     {% for part in parts %}
                                     <tr>
                                         <td>{{ part.part_name }}</td>
-                                        <td>${{ "%.2f"|format(part.cost|float) }}</td>
+                                        <td>{{ currency_symbol }}{{ "%.2f"|format(part.cost|float) }}</td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>

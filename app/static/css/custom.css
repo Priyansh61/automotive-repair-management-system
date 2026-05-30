@@ -36,6 +36,20 @@
 /* Navbar accent border */
 .navbar.navbar-dark {
     border-bottom: 3px solid var(--repaisos-accent);
+    overflow: visible;  /* Allow dropdown menus to extend below navbar */
+}
+
+/* Navbar custom dropdown menus */
+.nav-dropdown-menu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    z-index: 1060;
+    min-width: 160px;
+}
+.nav-dropdown-menu.show {
+    display: block;
 }
 
 /* Keep nav links readable on dark navbar */

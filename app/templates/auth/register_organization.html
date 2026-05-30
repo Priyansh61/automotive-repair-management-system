@@ -39,7 +39,8 @@
                             {% endif %}
                         {% endwith %}
 
-                        <form method="POST" action="{{ url_for('auth.register_organization') }}" class="needs-validation" novalidate>
+                        <form method="POST" action="{{ url_for('auth.register_organization') }}"
+                              class="needs-validation" novalidate data-no-loading-state="true">
                             <div class="mb-3">
                                 <label for="name" class="form-label fw-semibold">Organization Name</label>
                                 <div class="input-group">

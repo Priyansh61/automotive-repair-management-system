@@ -27,7 +27,8 @@
         <div class="col-lg-8">
             <div class="card" style="border-top: 3px solid var(--primary);">
                 <div class="card-body p-4">
-                    <form method="post" action="{{ url_for('administrator.org_settings') if url_for('administrator.org_settings') is defined else '#' }}">
+                    <form method="post" action="{{ url_for('administrator.org_settings') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <div class="row g-4">
                             <!-- Organization Name -->
                             <div class="col-md-6">
@@ -35,7 +36,7 @@
                                     <i class="ti ti-building me-1"></i>
                                     Organization Name
                                 </label>
-                                <input type="text" class="form-control" name="org_name" value="{{ org.name|default('') }}" placeholder="Your Shop Name" required>
+                                <input type="text" class="form-control" name="name" value="{{ tenant.name|default('') }}" placeholder="Your Shop Name" required>
                             </div>
 
                             <!-- Phone -->
@@ -44,7 +45,7 @@
                                     <i class="ti ti-phone me-1"></i>
                                     Phone
                                 </label>
-                                <input type="tel" class="form-control" name="phone" value="{{ org.phone|default('') }}" placeholder="(555) 123-4567">
+                                <input type="tel" class="form-control" name="phone" value="{{ tenant.phone|default('') }}" placeholder="(555) 123-4567">
                             </div>
 
                             <!-- Address -->
@@ -53,7 +54,7 @@
                                     <i class="ti ti-map-pin me-1"></i>
                                     Address
                                 </label>
-                                <textarea class="form-control" name="address" rows="2" placeholder="123 Main Street, City, State ZIP">{{ org.address|default('') }}</textarea>
+                                <textarea class="form-control" name="address" rows="2" placeholder="123 Main Street, City, State ZIP">{{ tenant.address|default('') }}</textarea>
                             </div>
 
                             <!-- Email -->
@@ -62,7 +63,7 @@
                                     <i class="ti ti-mail me-1"></i>
                                     Email
                                 </label>
-                                <input type="email" class="form-control" name="email" value="{{ org.email|default('') }}" placeholder="shop@example.com">
+                                <input type="email" class="form-control" name="email" value="{{ tenant.email|default('') }}" placeholder="shop@example.com">
                             </div>
 
                             <!-- Logo URL -->
@@ -71,7 +72,7 @@
                                     <i class="ti ti-photo me-1"></i>
                                     Logo URL
                                 </label>
-                                <input type="url" class="form-control" name="logo_url" value="{{ org.logo_url|default('') }}" placeholder="https://example.com/logo.png">
+                                <input type="url" class="form-control" name="logo_url" value="{{ tenant.logo_url|default('') }}" placeholder="https://example.com/logo.png">
                             </div>
 
                             <!-- Tax Rate -->
@@ -80,7 +81,7 @@
                                     <i class="ti ti-percentage me-1"></i>
                                     Tax Rate (%)
                                 </label>
-                                <input type="number" class="form-control" name="tax_rate" step="0.01" min="0" max="100" value="{{ org.tax_rate|default('') }}" placeholder="8.25">
+                                <input type="number" class="form-control" name="tax_rate" step="0.01" min="0" max="100" value="{{ tenant.tax_rate|default('') }}" placeholder="8.25">
                             </div>
 
                             <!-- Currency -->
@@ -90,11 +91,13 @@
                                     Currency
                                 </label>
                                 <select class="form-select" name="currency">
-                                    <option value="USD" {% if org.currency|default('USD') == 'USD' %}selected{% endif %}>USD - US Dollar</option>
-                                    <option value="EUR" {% if org.currency|default('') == 'EUR' %}selected{% endif %}>EUR - Euro</option>
-                                    <option value="GBP" {% if org.currency|default('') == 'GBP' %}selected{% endif %}>GBP - British Pound</option>
-                                    <option value="CAD" {% if org.currency|default('') == 'CAD' %}selected{% endif %}>CAD - Canadian Dollar</option>
-                                    <option value="AUD" {% if org.currency|default('') == 'AUD' %}selected{% endif %}>AUD - Australian Dollar</option>
+                                    {% set cur = (tenant.settings or {}).get('currency', 'USD') %}
+                                    <option value="USD" {% if cur == 'USD' %}selected{% endif %}>USD - US Dollar ($)</option>
+                                    <option value="EUR" {% if cur == 'EUR' %}selected{% endif %}>EUR - Euro (€)</option>
+                                    <option value="GBP" {% if cur == 'GBP' %}selected{% endif %}>GBP - British Pound (£)</option>
+                                    <option value="CAD" {% if cur == 'CAD' %}selected{% endif %}>CAD - Canadian Dollar (CA$)</option>
+                                    <option value="AUD" {% if cur == 'AUD' %}selected{% endif %}>AUD - Australian Dollar (A$)</option>
+                                    <option value="INR" {% if cur == 'INR' %}selected{% endif %}>INR - Indian Rupee (₹)</option>
                                 </select>
                             </div>
 

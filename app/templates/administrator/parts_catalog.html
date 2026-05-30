@@ -67,7 +67,7 @@
                                         <span class="badge bg-secondary">{{ part.category|default('General') }}</span>
                                     </td>
                                     <td>
-                                        <span class="fw-bold text-success">${{ "%.2f"|format(part.cost|default(0)|float) }}</span>
+                                        <span class="fw-bold text-success">{{ currency_symbol }}{{ "%.2f"|format(part.cost|default(0)|float) }}</span>
                                     </td>
                                     <td>{{ part.supplier|default('N/A') }}</td>
                                     <td>
@@ -126,7 +126,7 @@
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form method="post" action="#">
+            <form method="post" action="{{ url_for('administrator.add_part') }}">
                 <div class="modal-body">
                     <div class="row g-3">
                         <div class="col-12">
@@ -152,8 +152,8 @@
                         <div class="col-md-6">
                             <label class="form-label">Cost *</label>
                             <div class="input-group">
-                                <span class="input-group-text">$</span>
-                                <input type="number" class="form-control" name="cost" step="0.01" min="0" required placeholder="0.00">
+                                <span class="input-group-text">{{ currency_symbol }}</span>
+                                <input type="number" class="form-control" name="part_cost" step="0.01" min="0" required placeholder="0.00">
                             </div>
                         </div>
                         <div class="col-md-6">

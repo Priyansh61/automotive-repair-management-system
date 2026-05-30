@@ -41,6 +41,7 @@ class BaseConfig:
     NEON_AUTH_URL = os.environ.get('NEON_AUTH_URL')
     NEON_AUTH_JWKS_URL = os.environ.get('NEON_AUTH_JWKS_URL')
     NEON_AUTH_ENABLED = bool(os.environ.get('NEON_AUTH_URL'))
+    LOCAL_DEV = os.environ.get('LOCAL_DEV', '').lower() in ('1', 'true', 'yes')
 
     # Flask configuration
     PERMANENT_SESSION_LIFETIME = timedelta(hours=2)

@@ -310,30 +310,29 @@ class TenantService:
             return False, ["Failed to decline invitation"]
 
     def get_user_tenants(self, user_id: int) -> List[Dict[str, Any]]:
-        """Get all tenants a user belongs to"""
+        """Get all tenants a user belongs to (single JOIN query)"""
         try:
-            memberships = db.session.execute(
-                db.select(TenantMembership)
+            rows = db.session.execute(
+                db.select(TenantMembership, Tenant)
+                .join(Tenant, Tenant.tenant_id == TenantMembership.tenant_id)
                 .where(
                     TenantMembership.user_id == user_id,
                     TenantMembership.status == TenantMembership.STATUS_ACTIVE,
                 )
                 .order_by(TenantMembership.is_default.desc())
-            ).scalars().all()
+            ).all()
 
-            results = []
-            for m in memberships:
-                tenant = Tenant.find_by_id(m.tenant_id)
-                if tenant:
-                    results.append({
-                        'tenant_id': tenant.tenant_id,
-                        'name': tenant.name,
-                        'slug': tenant.slug,
-                        'role': m.role,
-                        'is_default': m.is_default,
-                        'status': tenant.status,
-                    })
-            return results
+            return [
+                {
+                    'tenant_id': tenant.tenant_id,
+                    'name': tenant.name,
+                    'slug': tenant.slug,
+                    'role': m.role,
+                    'is_default': m.is_default,
+                    'status': tenant.status,
+                }
+                for m, tenant in rows
+            ]
 
         except Exception as e:
             self.logger.error(f"Failed to get user tenants: {e}")

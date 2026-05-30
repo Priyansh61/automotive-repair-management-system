@@ -42,9 +42,11 @@
                                 <label class="form-label">Role</label>
                                 <select class="form-select" name="role" required>
                                     <option value="">Select role...</option>
-                                    <option value="administrator">Administrator</option>
-                                    <option value="technician">Technician</option>
-                                    <option value="viewer">Viewer</option>
+                                    <option value="admin">Admin — full management access</option>
+                                    <option value="manager">Manager — operations &amp; scheduling</option>
+                                    <option value="technician">Technician — jobs &amp; services</option>
+                                    <option value="parts_clerk">Parts Clerk — inventory &amp; parts</option>
+                                    <option value="viewer">Viewer — read-only</option>
                                 </select>
                             </div>
                             <div class="col-md-3">
@@ -100,8 +102,16 @@
                                         </span>
                                     </td>
                                     <td>
-                                        <span class="badge bg-{% if member.role == 'administrator' %}primary{% elif member.role == 'technician' %}info{% else %}secondary{% endif %}">
-                                            {{ member.role|title }}
+                                        {% set role_color = {
+                                            'owner': 'warning',
+                                            'admin': 'primary',
+                                            'manager': 'info',
+                                            'technician': 'success',
+                                            'parts_clerk': 'teal',
+                                            'viewer': 'secondary'
+                                        } %}
+                                        <span class="badge bg-{{ role_color.get(member.role, 'secondary') }}">
+                                            {{ member.role|replace('_', ' ')|title }}
                                         </span>
                                     </td>
                                     <td>
@@ -125,10 +135,16 @@
                                     <td>
                                         <div class="d-flex gap-1">
                                             <form method="post" action="{{ url_for('administrator.update_member_role', membership_id=member.membership_id) }}" class="d-inline">
-                                                <select class="form-select form-select-sm d-inline-block" name="role" onchange="this.form.submit()" style="width: auto;">
-                                                    <option value="administrator" {% if member.role == 'administrator' %}selected{% endif %}>Admin</option>
-                                                    <option value="technician" {% if member.role == 'technician' %}selected{% endif %}>Tech</option>
-                                                    <option value="viewer" {% if member.role == 'viewer' %}selected{% endif %}>Viewer</option>
+                                                <select class="form-select form-select-sm d-inline-block" name="role" onchange="this.form.submit()" style="width: auto;"
+                                                        {% if member.role == 'owner' %}disabled title="Owner role cannot be changed here"{% endif %}>
+                                                    <option value="admin"        {% if member.role == 'admin' %}selected{% endif %}>Admin</option>
+                                                    <option value="manager"      {% if member.role == 'manager' %}selected{% endif %}>Manager</option>
+                                                    <option value="technician"   {% if member.role == 'technician' %}selected{% endif %}>Technician</option>
+                                                    <option value="parts_clerk"  {% if member.role == 'parts_clerk' %}selected{% endif %}>Parts Clerk</option>
+                                                    <option value="viewer"       {% if member.role == 'viewer' %}selected{% endif %}>Viewer</option>
+                                                    {% if member.role == 'owner' %}
+                                                    <option value="owner" selected>Owner</option>
+                                                    {% endif %}
                                                 </select>
                                             </form>
                                             <form method="post" action="{{ url_for('administrator.remove_member', membership_id=member.membership_id) }}" class="d-inline" onsubmit="return confirm('Remove this team member?');">

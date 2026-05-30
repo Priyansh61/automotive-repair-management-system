@@ -2,14 +2,14 @@
 Technician Routes Blueprint
 Contains work order management, service and parts addition functionality
 """
-from flask import Blueprint, render_template, request, flash, redirect, url_for, jsonify, session
+from flask import Blueprint, render_template, request, flash, redirect, url_for, jsonify, session, g
 from datetime import date, datetime
 import logging
 from app.services.job_service import JobService
 from app.services.customer_service import CustomerService
 from app.models.service import Service
 from app.models.part import Part
-from app.utils.decorators import handle_database_errors, log_function_call, validate_pagination
+from app.utils.decorators import handle_database_errors, log_function_call, validate_pagination, login_required
 from app.utils.validators import sanitize_input, validate_positive_integer, validate_date
 
 # Create blueprint
@@ -41,9 +41,10 @@ def current_jobs(page=1, per_page=10):
 
     try:
         jobs, total, total_pages = job_service.get_current_jobs(page, per_page)
+        job_dicts = [j.to_dict() for j in jobs]
 
         return render_template('technician/current_jobs.html',
-                             jobs=jobs,
+                             data=job_dicts,
                              page=page,
                              per_page=per_page,
                              total=total,
@@ -53,7 +54,7 @@ def current_jobs(page=1, per_page=10):
         logger.error(f"Failed to get current work orders: {e}")
         flash('Failed to load work orders', 'error')
         return render_template('technician/current_jobs.html',
-                             jobs=[],
+                             data=[],
                              page=1,
                              per_page=per_page,
                              total=0,
@@ -77,7 +78,10 @@ def job_detail(job_id):
             return redirect(url_for('technician.current_jobs'))
 
         return render_template('technician/job_detail.html',
-                             job_details=job_details)
+                             data=job_details['job_info'],
+                             services=job_details['services'],
+                             parts=job_details['parts'],
+                             job_completed=job_details['job_completed'])
 
     except Exception as e:
         logger.error(f"Failed to get work order details (ID: {job_id}): {e}")
@@ -106,7 +110,12 @@ def modify_job(job_id):
             return redirect(url_for('technician.job_detail', job_id=job_id))
 
         return render_template('technician/modify_job.html',
-                             job_details=job_details)
+                             data=job_details['job_info'],
+                             services=job_details['services'],
+                             parts=job_details['parts'],
+                             all_services=job_details['all_services'],
+                             all_parts=job_details['all_parts'],
+                             job_completed=job_details['job_completed'])
 
     except Exception as e:
         logger.error(f"Failed to load work order modification page (ID: {job_id}): {e}")
@@ -260,7 +269,8 @@ def create_job():
 
         job_date = datetime.strptime(job_date_str, '%Y-%m-%d').date()
 
-        success, errors, job = job_service.create_job(customer_id, job_date)
+        tenant_id = session.get('current_tenant_id') or getattr(g, 'current_tenant_id', None)
+        success, errors, job = job_service.create_job(customer_id, job_date, tenant_id=tenant_id)
 
         if success:
             flash('Work order created successfully!', 'success')
@@ -358,6 +368,7 @@ def dashboard():
 
 # API endpoints
 @technician_bp.route('/api/services')
+@login_required
 @handle_database_errors
 def api_get_services():
     """API: Get all services"""
@@ -375,6 +386,7 @@ def api_get_services():
 
 
 @technician_bp.route('/api/parts')
+@login_required
 @handle_database_errors
 def api_get_parts():
     """API: Get all parts"""
@@ -392,6 +404,7 @@ def api_get_parts():
 
 
 @technician_bp.route('/api/jobs/<int:job_id>/status')
+@login_required
 @handle_database_errors
 def api_get_job_status(job_id):
     """API: Get work order status"""

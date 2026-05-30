@@ -77,8 +77,8 @@ Modify Job #{{ data.job_id }} - RepairOS
                             <div class="info-item">
                                 <label class="info-label">Total Cost</label>
                                 <div class="info-value">
-                                    <i class="ti ti-currency-dollar me-2 text-success"></i>
-                                    ${{ "%.2f"|format(data.total_cost|float) }}
+                                    <i class="ti {{ currency_icon }} me-2 text-success"></i>
+                                    {{ currency_symbol }}{{ "%.2f"|format(data.total_cost|float) }}
                                 </div>
                             </div>
                         </div>
@@ -144,7 +144,7 @@ Modify Job #{{ data.job_id }} - RepairOS
                             <i class="ti ti-circle-plus me-2"></i>
                             Add New Service
                         </h6>
-                        <form method="POST" action="{{ url_for('add_service_to_job', job_id=data.job_id) }}">
+                        <form method="POST" action="{{ url_for('technician.add_service_to_job', job_id=data.job_id) }}">
                             <div class="row g-3">
                                 <div class="col-12">
                                     <label class="form-label">Service Type</label>
@@ -152,14 +152,14 @@ Modify Job #{{ data.job_id }} - RepairOS
                                         <option value="">Select a service...</option>
                                         {% for service in all_services %}
                                             <option value="{{ service.service_id }}">
-                                                {{ service.service_name }} - ${{ "%.2f"|format(service.cost|float) }}
+                                                {{ service.service_name }} - {{ currency_symbol }}{{ "%.2f"|format(service.cost|float) }}
                                             </option>
                                         {% endfor %}
                                     </select>
                                 </div>
                                 <div class="col-6">
                                     <label class="form-label">Quantity</label>
-                                    <input type="number" name="service_qty" class="form-control" min="1" value="1" required {% if job_completed %}disabled{% endif %}>
+                                    <input type="number" name="quantity" class="form-control" min="1" value="1" required {% if job_completed %}disabled{% endif %}>
                                 </div>
                                 <div class="col-6 d-flex align-items-end">
                                     <button type="submit" class="btn btn-info w-100" {% if job_completed %}disabled{% endif %}>
@@ -218,7 +218,7 @@ Modify Job #{{ data.job_id }} - RepairOS
                             <i class="ti ti-circle-plus me-2"></i>
                             Add New Part
                         </h6>
-                        <form method="POST" action="{{ url_for('add_part_to_job', job_id=data.job_id) }}">
+                        <form method="POST" action="{{ url_for('technician.add_part_to_job', job_id=data.job_id) }}">
                             <div class="row g-3">
                                 <div class="col-12">
                                     <label class="form-label">Part Type</label>
@@ -226,14 +226,14 @@ Modify Job #{{ data.job_id }} - RepairOS
                                         <option value="">Select a part...</option>
                                         {% for part in all_parts %}
                                             <option value="{{ part.part_id }}">
-                                                {{ part.part_name }} - ${{ "%.2f"|format(part.cost|float) }}
+                                                {{ part.part_name }} - {{ currency_symbol }}{{ "%.2f"|format(part.cost|float) }}
                                             </option>
                                         {% endfor %}
                                     </select>
                                 </div>
                                 <div class="col-6">
                                     <label class="form-label">Quantity</label>
-                                    <input type="number" name="part_qty" class="form-control" min="1" value="1" required {% if job_completed %}disabled{% endif %}>
+                                    <input type="number" name="quantity" class="form-control" min="1" value="1" required {% if job_completed %}disabled{% endif %}>
                                 </div>
                                 <div class="col-6 d-flex align-items-end">
                                     <button type="submit" class="btn btn-success w-100" {% if job_completed %}disabled{% endif %}>
@@ -301,7 +301,7 @@ Modify Job #{{ data.job_id }} - RepairOS
                                 </div>
                             </div>
                             <p class="text-muted mb-0">
-                                Current total cost: <strong>${{ "%.2f"|format(data.total_cost|float) }}</strong>
+                                Current total cost: <strong>{{ currency_symbol }}{{ "%.2f"|format(data.total_cost|float) }}</strong>
                             </p>
                         </div>
                         <div class="col-md-4 text-md-end">

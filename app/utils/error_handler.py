@@ -14,73 +14,116 @@ from werkzeug.exceptions import HTTPException
 import os
 
 
+class _ColorFormatter(logging.Formatter):
+    """Console formatter with ANSI color codes per level."""
+
+    COLORS = {
+        'DEBUG':    '\033[36m',   # cyan
+        'INFO':     '\033[32m',   # green
+        'WARNING':  '\033[33m',   # yellow
+        'ERROR':    '\033[31m',   # red
+        'CRITICAL': '\033[35m',   # magenta
+    }
+    RESET = '\033[0m'
+    GREY = '\033[90m'
+
+    def format(self, record):
+        color = self.COLORS.get(record.levelname, '')
+        # Shorten logger name: keep last two segments (e.g. "app.views.administrator" → "administrator")
+        name_parts = record.name.split('.')
+        short_name = '.'.join(name_parts[-2:]) if len(name_parts) > 1 else record.name
+        ts = self.formatTime(record, '%H:%M:%S')
+        level_tag = f"{color}{record.levelname:<8}{self.RESET}"
+        name_tag = f"{self.GREY}{short_name:<30}{self.RESET}"
+        msg = record.getMessage()
+        line = f"{ts}  {level_tag}  {name_tag}  {msg}"
+        if record.exc_info:
+            line += '\n' + self.formatException(record.exc_info)
+        return line
+
+
 class LoggerConfig:
     """Logger configuration"""
 
-    # Log level mapping
     LOG_LEVELS = {
-        'DEBUG': logging.DEBUG,
-        'INFO': logging.INFO,
-        'WARNING': logging.WARNING,
-        'ERROR': logging.ERROR,
-        'CRITICAL': logging.CRITICAL
+        'DEBUG': logging.DEBUG, 'INFO': logging.INFO,
+        'WARNING': logging.WARNING, 'ERROR': logging.ERROR, 'CRITICAL': logging.CRITICAL,
     }
 
     @staticmethod
     def setup_logging(app: Flask):
-        """Set up the application logging system"""
+        """Configure clean, readable logging."""
+        import time
         log_dir = Path(app.config.get('LOG_DIR', 'logs'))
         log_dir.mkdir(exist_ok=True)
 
-        # Get log level
         log_level = app.config.get('LOG_LEVEL', 'INFO')
-        level = LoggerConfig.LOG_LEVELS.get(log_level, logging.INFO)
+        level = LoggerConfig.LOG_LEVELS.get(log_level.upper(), logging.INFO)
 
-        # Create root logger
-        root_logger = logging.getLogger()
-        root_logger.setLevel(level)
+        # ── Root logger ──────────────────────────────────────────────────────
+        root = logging.getLogger()
+        root.setLevel(level)
+        for h in root.handlers[:]:
+            root.removeHandler(h)
 
-        # Clear existing handlers
-        for handler in root_logger.handlers[:]:
-            root_logger.removeHandler(handler)
+        # Console: colored, human-readable
+        console = logging.StreamHandler(sys.stdout)
+        console.setLevel(level)
+        console.setFormatter(_ColorFormatter())
+        root.addHandler(console)
 
-        # Create formatter
-        formatter = logging.Formatter(
-            fmt='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S'
+        # File: plain text, rotating
+        file_fmt = logging.Formatter(
+            '%(asctime)s  %(levelname)-8s  %(name)s  %(message)s',
+            datefmt='%Y-%m-%d %H:%M:%S',
         )
-
-        # Console handler
-        console_handler = logging.StreamHandler(sys.stdout)
-        console_handler.setLevel(level)
-        console_handler.setFormatter(formatter)
-        root_logger.addHandler(console_handler)
-
-        # Application log file handler
-        app_log_file = log_dir / 'app.log'
-        app_handler = logging.handlers.RotatingFileHandler(
-            app_log_file,
-            maxBytes=10*1024*1024,  # 10MB
-            backupCount=5,
-            encoding='utf-8'
+        app_file = logging.handlers.RotatingFileHandler(
+            log_dir / 'app.log', maxBytes=10 * 1024 * 1024, backupCount=5, encoding='utf-8'
         )
-        app_handler.setLevel(level)
-        app_handler.setFormatter(formatter)
-        root_logger.addHandler(app_handler)
+        app_file.setLevel(level)
+        app_file.setFormatter(file_fmt)
+        root.addHandler(app_file)
 
-        # Error log file handler
-        error_log_file = log_dir / 'error.log'
-        error_handler = logging.handlers.RotatingFileHandler(
-            error_log_file,
-            maxBytes=10*1024*1024,  # 10MB
-            backupCount=5,
-            encoding='utf-8'
+        # Errors-only file
+        err_file = logging.handlers.RotatingFileHandler(
+            log_dir / 'error.log', maxBytes=10 * 1024 * 1024, backupCount=5, encoding='utf-8'
         )
-        error_handler.setLevel(logging.ERROR)
-        error_handler.setFormatter(formatter)
-        root_logger.addHandler(error_handler)
+        err_file.setLevel(logging.ERROR)
+        err_file.setFormatter(file_fmt)
+        root.addHandler(err_file)
 
-        app.logger.info("Logging system initialized")
+        # ── Silence noisy third-party loggers ────────────────────────────────
+        # SQLAlchemy raw SQL — shown only if LOG_SQL=true
+        sql_level = logging.DEBUG if os.environ.get('LOG_SQL', '').lower() == 'true' else logging.WARNING
+        logging.getLogger('sqlalchemy.engine').setLevel(sql_level)
+        logging.getLogger('sqlalchemy.pool').setLevel(logging.WARNING)
+        logging.getLogger('sqlalchemy.dialects').setLevel(logging.WARNING)
+        # Werkzeug's per-request lines replaced by our after_request hook below
+        logging.getLogger('werkzeug').setLevel(logging.WARNING)
+
+        # ── Request logging hooks ─────────────────────────────────────────────
+        req_logger = logging.getLogger('repairosapp.request')
+
+        @app.before_request
+        def _before():
+            request._start_time = time.monotonic()
+
+        @app.after_request
+        def _after(response):
+            # Skip static assets
+            if request.path.startswith('/static'):
+                return response
+            duration_ms = int((time.monotonic() - getattr(request, '_start_time', time.monotonic())) * 1000)
+            status = response.status_code
+            user = session.get('username', '-')
+            tenant = session.get('current_tenant_name', '-')
+            level_fn = req_logger.warning if status >= 400 else req_logger.info
+            level_fn(
+                f"{request.method} {request.path} → {status}  [{duration_ms}ms]  {user}@{tenant}"
+            )
+            return response
+
+        app.logger.info("Logging initialised  (SQL=%s)", "on" if sql_level == logging.DEBUG else "off")
 
 
 class ApplicationError(Exception):

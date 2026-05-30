@@ -93,13 +93,13 @@ Billing History & Overdue Bills - Administrator Portal
                 <div class="card-body">
                     <div class="d-flex align-items-center">
                         <div class="flex-shrink-0">
-                            <i class="ti ti-currency-dollar text-success" style="font-size: 2.5rem;"></i>
+                            <i class="ti {{ currency_icon }} text-success" style="font-size: 2.5rem;"></i>
                         </div>
                         <div class="flex-grow-1 ms-3">
                             <div class="small text-muted">Total Revenue</div>
                             <div class="h4 mb-0">
                                 {% if jobs %}
-                                    ${{ "%.2f"|format(jobs|selectattr('paid')|sum(attribute='total_cost')|float) }}
+                                    {{ currency_symbol }}{{ "%.2f"|format(jobs|selectattr('paid')|sum(attribute='total_cost')|float) }}
                                 {% else %}
                                     $0.00
                                 {% endif %}
@@ -250,7 +250,7 @@ Billing History & Overdue Bills - Administrator Portal
                                                     {{ job.job_date }}
                                                 </td>
                                                 <td>
-                                                    <span class="fw-bold text-success">${{ "%.2f"|format(job.total_cost|float) }}</span>
+                                                    <span class="fw-bold text-success">{{ currency_symbol }}{{ "%.2f"|format(job.total_cost|float) }}</span>
                                                 </td>
                                                 <td>
                                                     {% if job.completed %}
@@ -319,7 +319,7 @@ Billing History & Overdue Bills - Administrator Portal
                                                     {{ job.job_date }}
                                                 </td>
                                                 <td>
-                                                    <span class="fw-bold text-success">${{ "%.2f"|format(job.total_cost|float) }}</span>
+                                                    <span class="fw-bold text-success">{{ currency_symbol }}{{ "%.2f"|format(job.total_cost|float) }}</span>
                                                 </td>
                                                 <td>
                                                     {% if job.completed %}

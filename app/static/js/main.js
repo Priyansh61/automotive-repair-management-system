@@ -406,13 +406,6 @@ const RepairOSApp = {
     setupNotifications() {
         this.loadNotifications();
         this.updateNotificationBadge();
-
-        const notificationDropdown = document.querySelector('[data-bs-toggle="dropdown"]');
-        if (notificationDropdown) {
-            notificationDropdown.addEventListener('click', () => {
-                this.markNotificationsAsRead();
-            });
-        }
     },
 
     loadNotifications() {

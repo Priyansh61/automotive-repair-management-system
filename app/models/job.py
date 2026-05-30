@@ -61,7 +61,7 @@ class Job(db.Model, BaseModelMixin, TenantScopedMixin):
     )
     job_date: Mapped[date] = mapped_column(Date, nullable=False)
     customer: Mapped[int] = mapped_column(ForeignKey('customer.customer_id', onupdate='CASCADE'), nullable=False)
-    total_cost: Mapped[Optional[Decimal]] = mapped_column(Numeric(6, 2), nullable=True)
+    total_cost: Mapped[Optional[Decimal]] = mapped_column(Numeric(12, 2), nullable=True)
     completed: Mapped[bool] = mapped_column(Boolean, default=False)
     paid: Mapped[bool] = mapped_column(Boolean, default=False)
     assigned_to: Mapped[Optional[int]] = mapped_column(
@@ -90,8 +90,10 @@ class Job(db.Model, BaseModelMixin, TenantScopedMixin):
         ).scalar() or 0
 
         offset = (page - 1) * per_page
+        from sqlalchemy.orm import joinedload
         query = (
             db.select(cls)
+            .options(joinedload(cls.customer_rel))
             .where(and_(*base_filter))
             .join(Customer, cls.customer == Customer.customer_id)
             .order_by(Customer.first_name, Customer.family_name, cls.job_date.desc())
@@ -99,7 +101,7 @@ class Job(db.Model, BaseModelMixin, TenantScopedMixin):
             .limit(per_page)
         )
 
-        jobs = list(db.session.execute(query).scalars())
+        jobs = list(db.session.execute(query).unique().scalars())
         return jobs, total
 
     @classmethod

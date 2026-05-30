@@ -5,7 +5,7 @@ Business logic for customer operations using SQLAlchemy ORM
 from typing import List, Optional, Dict, Any, Tuple
 from datetime import date, timedelta
 import logging
-from sqlalchemy import and_
+from sqlalchemy import and_, exists
 from app.extensions import db
 from app.models.customer import Customer
 from app.models.job import Job
@@ -196,19 +196,29 @@ class CustomerService:
             Customer statistics dictionary
         """
         try:
+            from app.models.job import Job
+            from sqlalchemy.orm import joinedload
+
             customer = self.get_customer_by_id(customer_id)
             if not customer:
                 return {}
 
-            all_jobs = customer.get_jobs()
-            unpaid_jobs = customer.get_unpaid_jobs()
-            total_unpaid = customer.get_total_unpaid_amount()
+            # Eager-load customer_rel so to_dict() doesn't fire per-job queries
+            all_jobs = db.session.execute(
+                db.select(Job)
+                .options(joinedload(Job.customer_rel))
+                .where(Job.customer == customer_id)
+                .order_by(Job.job_date.desc())
+            ).scalars().all()
+
+            unpaid_count = sum(1 for j in all_jobs if not j.paid)
+            total_unpaid = sum(float(j.total_cost or 0) for j in all_jobs if not j.paid)
 
             return {
                 'customer_info': customer.to_dict(),
                 'total_jobs': len(all_jobs),
-                'completed_jobs': len([j for j in all_jobs if j.completed]),
-                'unpaid_jobs': len(unpaid_jobs),
+                'completed_jobs': sum(1 for j in all_jobs if j.completed),
+                'unpaid_jobs': unpaid_count,
                 'total_unpaid_amount': total_unpaid,
                 'recent_jobs': [j.to_dict() for j in all_jobs[:5]]
             }
@@ -235,21 +245,30 @@ class CustomerService:
             Filtered list of customers
         """
         try:
-            customers = Customer.get_all_sorted()
+            from app.models.job import Job
+
+            query = db.select(Customer)
 
             if has_unpaid is not None:
-                if has_unpaid:
-                    customers = [c for c in customers if c.get_unpaid_jobs()]
-                else:
-                    customers = [c for c in customers if not c.get_unpaid_jobs()]
+                unpaid_subq = exists().where(
+                    Job.customer == Customer.customer_id,
+                    Job.paid == False,
+                    Job.tenant_id == Customer.tenant_id,
+                )
+                query = query.where(unpaid_subq if has_unpaid else ~unpaid_subq)
 
             if has_overdue is not None:
-                if has_overdue:
-                    customers = [c for c in customers if c.has_overdue_bills()]
-                else:
-                    customers = [c for c in customers if not c.has_overdue_bills()]
+                threshold = date.today() - timedelta(days=14)
+                overdue_subq = exists().where(
+                    Job.customer == Customer.customer_id,
+                    Job.paid == False,
+                    Job.job_date < threshold,
+                    Job.tenant_id == Customer.tenant_id,
+                )
+                query = query.where(overdue_subq if has_overdue else ~overdue_subq)
 
-            return customers
+            query = query.order_by(Customer.family_name, Customer.first_name)
+            return db.session.execute(query).scalars().all()
 
         except Exception as e:
             self.logger.error(f"Failed to filter customers: {e}")

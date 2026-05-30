@@ -61,20 +61,21 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     try {
-        // Get session from Neon Auth (client-side cookies are visible to Neon Auth domain)
-        const sessionData = await window.neonAuth.getSession();
-        const token = sessionData ? (sessionData.token || null) : null;
+        // Get full session from Neon Auth (includes user data for fallback auth)
+        const fullSession = await window.neonAuth._getFullSession();
 
-        if (!sessionData) {
+        if (!fullSession) {
             showError('Could not retrieve session. Please sign in again.');
             return;
         }
 
-        // Forward token to Flask backend
+        const token = fullSession.session ? fullSession.session.token : null;
+        const userData = fullSession.user || null;
+
+        // Forward token + user to Flask backend (user enables fallback auth path)
         const payload = {};
-        if (token) {
-            payload.token = token;
-        }
+        if (token) payload.token = token;
+        if (userData) payload.user = userData;
 
         const response = await fetch('/auth/neon-callback', {
             method: 'POST',

@@ -43,7 +43,7 @@
                         <span class="badge bg-success-lt me-2"><i class="ti ti-circle-check"></i></span>
                         <div class="subheader">Total Paid</div>
                     </div>
-                    <div class="h1 mb-0">${{ "%.2f"|format(billing_stats.total_paid|default(0)|float) }}</div>
+                    <div class="h1 mb-0">{{ currency_symbol }}{{ "%.2f"|format(billing_stats.total_paid|default(0)|float) }}</div>
                 </div>
             </div>
         </div>
@@ -54,7 +54,7 @@
                         <span class="badge bg-warning-lt me-2"><i class="ti ti-clock"></i></span>
                         <div class="subheader">Unpaid</div>
                     </div>
-                    <div class="h1 mb-0">${{ "%.2f"|format(billing_stats.total_unpaid|default(0)|float) }}</div>
+                    <div class="h1 mb-0">{{ currency_symbol }}{{ "%.2f"|format(billing_stats.total_unpaid|default(0)|float) }}</div>
                 </div>
             </div>
         </div>
@@ -65,7 +65,7 @@
                         <span class="badge bg-danger-lt me-2"><i class="ti ti-alert-triangle"></i></span>
                         <div class="subheader">Overdue</div>
                     </div>
-                    <div class="h1 mb-0">${{ "%.2f"|format(billing_stats.total_overdue|default(0)|float) }}</div>
+                    <div class="h1 mb-0">{{ currency_symbol }}{{ "%.2f"|format(billing_stats.total_overdue|default(0)|float) }}</div>
                 </div>
             </div>
         </div>
@@ -158,7 +158,7 @@
                                         </span>
                                     </td>
                                     <td>
-                                        <span class="fw-bold">${{ "%.2f"|format(bill.total_cost|default(0)|float) }}</span>
+                                        <span class="fw-bold">{{ currency_symbol }}{{ "%.2f"|format(bill.total_cost|default(0)|float) }}</span>
                                     </td>
                                     <td>
                                         {% if bill.paid == 1 %}

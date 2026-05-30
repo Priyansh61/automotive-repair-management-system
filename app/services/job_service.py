@@ -253,7 +253,7 @@ class JobService:
                 'payment_rate': 0
             }
 
-    def create_job(self, customer_id: int, job_date: date) -> Tuple[bool, List[str], Optional[Job]]:
+    def create_job(self, customer_id: int, job_date: date, tenant_id: int = None) -> Tuple[bool, List[str], Optional[Job]]:
         """
         Create a new job
 
@@ -271,7 +271,7 @@ class JobService:
             job = Job(
                 job_date=job_date,
                 customer=customer_id,
-                tenant_id=self._current_tenant_id(),
+                tenant_id=tenant_id or self._current_tenant_id(),
                 total_cost=0.0,
                 completed=False,
                 paid=False

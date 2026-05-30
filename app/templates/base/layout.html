@@ -37,31 +37,46 @@
         <div class="container-xl">
             <!-- Brand Logo -->
             <a class="navbar-brand d-flex align-items-center" href="{{ url_for('main.index') }}">
+                {% if current_tenant and current_tenant.logo_url %}
+                <img src="{{ current_tenant.logo_url }}" alt="{{ current_tenant.name }}" style="height: 30px; width: auto; margin-right: 8px; object-fit: contain;">
+                {% else %}
                 <img src="{{ url_for('static', filename='images/RepairOS-logo.svg') }}" alt="RepairOS" style="height: 30px; width: auto; margin-right: 8px;">
+                {% endif %}
                 <span>RepairOS{% if current_tenant %} &middot; {{ current_tenant.name }}{% endif %}</span>
             </a>
 
             {% if user_tenants and user_tenants|length > 1 %}
             <!-- Organization Switcher -->
-            <div class="dropdown me-3">
-                <button class="btn btn-sm btn-outline-light dropdown-toggle d-flex align-items-center" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <div class="me-3" style="position:relative;">
+                <button class="btn btn-sm btn-outline-light d-flex align-items-center"
+                        data-nav-dropdown="orgswitcher" style="cursor:pointer;">
                     <i class="ti ti-building me-1"></i>
                     <span class="d-none d-md-inline">{{ current_tenant.name if current_tenant else 'Select Org' }}</span>
+                    <i class="ti ti-chevron-down ms-1" style="font-size:0.7rem;"></i>
                 </button>
-                <ul class="dropdown-menu">
+                <ul class="dropdown-menu nav-dropdown-menu" id="navDropdown-orgswitcher">
                     <li><h6 class="dropdown-header">Organizations</h6></li>
                     {% for tenant in user_tenants %}
                     <li>
-                        <a class="dropdown-item d-flex align-items-center" href="/org/{{ tenant.slug }}/dashboard">
-                            {% if current_tenant and tenant.id == current_tenant.id %}
-                            <i class="ti ti-check me-2 text-success"></i>
-                            {% else %}
-                            <span style="width: 14px; display: inline-block;" class="me-2"></span>
-                            {% endif %}
-                            {{ tenant.name }}
-                        </a>
+                        {% if current_tenant and tenant.tenant_id == current_tenant.tenant_id %}
+                        <span class="dropdown-item d-flex align-items-center text-muted">
+                            <i class="ti ti-check me-2 text-success"></i>{{ tenant.name }}
+                        </span>
+                        {% else %}
+                        <form method="post" action="{{ url_for('auth.switch_tenant') }}" style="margin:0;">
+                            <input type="hidden" name="tenant_slug" value="{{ tenant.slug }}">
+                            <button type="submit" class="dropdown-item d-flex align-items-center" style="background:none;border:none;width:100%;text-align:left;">
+                                <span style="width: 14px; display: inline-block;" class="me-2"></span>
+                                {{ tenant.name }}
+                            </button>
+                        </form>
+                        {% endif %}
                     </li>
                     {% endfor %}
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="{{ url_for('auth.register_organization') }}">
+                        <i class="ti ti-plus me-2"></i>New Organization
+                    </a></li>
                 </ul>
             </div>
             {% endif %}
@@ -148,14 +163,15 @@
                         </li>
 
                         <!-- Notifications -->
-                        <li class="nav-item dropdown me-3">
-                            <a class="nav-link position-relative" href="#" role="button" data-bs-toggle="dropdown">
+                        <li class="nav-item me-3" style="position:relative;">
+                            <a class="nav-link position-relative" href="#" role="button"
+                               data-nav-dropdown="notifications" style="cursor:pointer;">
                                 <i class="ti ti-bell"></i>
                                 {% if notification_count|default(0) > 0 %}
                                 <span class="badge bg-danger badge-notification">{{ notification_count }}</span>
                                 {% endif %}
                             </a>
-                            <ul class="dropdown-menu dropdown-menu-end">
+                            <ul class="dropdown-menu dropdown-menu-end nav-dropdown-menu" id="navDropdown-notifications">
                                 <li><h6 class="dropdown-header">Notifications</h6></li>
                                 {% if overdue_bills_count|default(0) > 0 %}
                                 <li><a class="dropdown-item" href="{% if session.current_role in ('owner', 'admin') %}{{ url_for('administrator.overdue_bills') }}{% else %}#{% endif %}">
@@ -188,41 +204,40 @@
                         </li>
 
                         <!-- User Menu -->
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" role="button" data-bs-toggle="dropdown">
-                                <span class="avatar avatar-sm bg-white-lt me-2"><i class="ti ti-user"></i></span>
+                        <li class="nav-item" style="position:relative;">
+                            <a class="nav-link d-flex align-items-center" href="#" role="button"
+                               data-nav-dropdown="usermenu" style="cursor:pointer;">
+                                <span class="avatar avatar-sm bg-white text-dark me-2" style="font-weight:700;font-size:0.8rem;">
+                                    {{ (session.username or session.user_id or '?')|string|first|upper }}
+                                </span>
                                 <div class="d-none d-md-block lh-sm">
-                                    <div class="fw-semibold">{{ session.user_id }}</div>
-                                    <small class="text-white-50">{{ session.current_role|title }}</small>
+                                    <div class="fw-semibold">{{ session.username or session.user_id }}</div>
+                                    <small class="text-white-50">{{ session.current_role|default('user')|title }}</small>
                                 </div>
+                                <i class="ti ti-chevron-down ms-1" style="font-size:0.75rem;"></i>
                             </a>
-                            <ul class="dropdown-menu dropdown-menu-end">
+                            <ul class="dropdown-menu dropdown-menu-end nav-dropdown-menu" id="navDropdown-usermenu" style="min-width:190px;">
                                 <li><a class="dropdown-item" href="{{ url_for('main.dashboard') }}">
                                     <i class="ti ti-layout-dashboard me-2"></i>Dashboard
-                                </a></li>
-                                <li><a class="dropdown-item" href="{{ url_for('main.dashboard') }}">
-                                    <i class="ti ti-user me-2"></i>Profile
                                 </a></li>
                                 <li><a class="dropdown-item" href="{% if session.current_role in ('owner', 'admin') %}{{ url_for('administrator.org_settings') }}{% else %}{{ url_for('main.dashboard') }}{% endif %}">
                                     <i class="ti ti-settings me-2"></i>Settings
                                 </a></li>
-                                {% if user_tenants and user_tenants|length > 1 %}
                                 <li><hr class="dropdown-divider"></li>
+                                {% if user_tenants and user_tenants|length > 1 %}
                                 <li>
-                                    <a class="dropdown-item" href="#" onclick="document.querySelector('.org-switcher-btn')?.click(); return false;">
+                                    <a class="dropdown-item" href="{{ url_for('auth.select_tenant') }}">
                                         <i class="ti ti-switch-horizontal me-2"></i>Switch Organization
                                     </a>
                                 </li>
                                 {% endif %}
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('auth.register_organization') }}">
+                                        <i class="ti ti-plus me-2"></i>New Organization
+                                    </a>
+                                </li>
                                 <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="{{ url_for('main.help_page') }}">
-                                    <i class="ti ti-help me-2"></i>Help
-                                </a></li>
-                                <li><a class="dropdown-item" href="{{ url_for('main.about') }}">
-                                    <i class="ti ti-info-circle me-2"></i>About
-                                </a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item text-danger" href="{{ url_for('main.logout') }}">
+                                <li><a class="dropdown-item text-danger fw-semibold" href="{{ url_for('main.logout') }}">
                                     <i class="ti ti-logout me-2"></i>Sign Out
                                 </a></li>
                             </ul>
@@ -313,10 +328,33 @@
     </footer>
 
     <!-- JavaScript Libraries -->
-    <!-- Bootstrap JS (exposes window.bootstrap for Toast/Modal APIs) -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- Tabler JS -->
     <script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.4.0/dist/js/tabler.min.js"></script>
+    <!-- Navbar dropdown toggle (plain JS — no Bootstrap dependency) -->
+    <script>
+    (function () {
+        function closeAll() {
+            document.querySelectorAll('.nav-dropdown-menu.show').forEach(function (m) {
+                m.classList.remove('show');
+            });
+        }
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('[data-nav-dropdown]').forEach(function (toggle) {
+                toggle.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    var menuId = 'navDropdown-' + toggle.getAttribute('data-nav-dropdown');
+                    var menu = document.getElementById(menuId);
+                    if (!menu) return;
+                    var isOpen = menu.classList.contains('show');
+                    closeAll();
+                    if (!isOpen) menu.classList.add('show');
+                });
+            });
+            document.addEventListener('click', closeAll);
+        });
+    })();
+    </script>
 
     <!-- Moment.js for date handling -->
     <script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/moment.min.js"></script>

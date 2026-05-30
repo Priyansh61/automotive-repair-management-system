@@ -11,7 +11,7 @@ from app.extensions import db as _db
 from app.services.customer_service import CustomerService
 from app.services.job_service import JobService
 from app.services.billing_service import BillingService
-from app.utils.decorators import handle_database_errors, log_function_call
+from app.utils.decorators import handle_database_errors, log_function_call, login_required
 from app.utils.validators import validate_customer_data, sanitize_input
 from app.utils.security import require_auth, InputSanitizer, SQLInjectionProtection
 from app.utils.error_handler import ValidationError, BusinessLogicError
@@ -31,6 +31,11 @@ billing_service = BillingService()
 @log_function_call
 def index():
     """Home page - Display system overview and quick statistics"""
+    # Redirect authenticated users with a tenant straight to the dashboard
+    # (avoids calling tenant-scoped services without tenant context)
+    if session.get('logged_in') and session.get('current_tenant_id'):
+        return redirect(url_for('main.dashboard'))
+
     try:
         # Get system statistics
         job_stats = job_service.get_job_statistics()
@@ -161,6 +166,7 @@ def api_search_customers():
 
 
 @main_bp.route('/api/customers/<int:customer_id>')
+@login_required
 @handle_database_errors
 def api_get_customer(customer_id):
     """API: Get customer details"""
@@ -178,6 +184,7 @@ def api_get_customer(customer_id):
 
 
 @main_bp.route('/customers')
+@login_required
 @handle_database_errors
 @log_function_call
 def customers():
@@ -208,6 +215,7 @@ def customers():
 
 
 @main_bp.route('/customers/new')
+@login_required
 def new_customer():
     """New customer page"""
     return render_template('customers/form.html',
@@ -216,6 +224,7 @@ def new_customer():
 
 
 @main_bp.route('/customers', methods=['POST'])
+@login_required
 @handle_database_errors
 def create_customer():
     """Create new customer"""
@@ -266,6 +275,7 @@ def create_customer():
 
 
 @main_bp.route('/customers/<int:customer_id>')
+@login_required
 @handle_database_errors
 @log_function_call
 def customer_detail(customer_id):
@@ -290,6 +300,7 @@ def customer_detail(customer_id):
 
 
 @main_bp.route('/customers/<int:customer_id>/edit')
+@login_required
 @handle_database_errors
 def edit_customer(customer_id):
     """Edit customer page"""
@@ -310,6 +321,7 @@ def edit_customer(customer_id):
 
 
 @main_bp.route('/customers/<int:customer_id>', methods=['POST'])
+@login_required
 @handle_database_errors
 def update_customer(customer_id):
     """Update customer information"""

@@ -170,15 +170,15 @@
                                 <div class="fw-semibold">{{ service.service_name }}</div>
                             </td>
                             <td>{{ service.qty }}</td>
-                            <td class="text-end">${{ "%.2f"|format(service.cost|float) }}</td>
-                            <td class="text-end fw-semibold">${{ "%.2f"|format(line_total) }}</td>
+                            <td class="text-end">{{ currency_symbol }}{{ "%.2f"|format(service.cost|float) }}</td>
+                            <td class="text-end fw-semibold">{{ currency_symbol }}{{ "%.2f"|format(line_total) }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
                     <tfoot>
                         <tr>
                             <td colspan="3" class="text-end fw-bold">Services Total:</td>
-                            <td class="text-end fw-bold text-success">${{ "%.2f"|format(services_total.value) }}</td>
+                            <td class="text-end fw-bold text-success">{{ currency_symbol }}{{ "%.2f"|format(services_total.value) }}</td>
                         </tr>
                     </tfoot>
                 </table>
@@ -222,15 +222,15 @@
                                 <div class="fw-semibold">{{ part.part_name }}</div>
                             </td>
                             <td>{{ part.qty }}</td>
-                            <td class="text-end">${{ "%.2f"|format(part.cost|float) }}</td>
-                            <td class="text-end fw-semibold">${{ "%.2f"|format(line_total) }}</td>
+                            <td class="text-end">{{ currency_symbol }}{{ "%.2f"|format(part.cost|float) }}</td>
+                            <td class="text-end fw-semibold">{{ currency_symbol }}{{ "%.2f"|format(line_total) }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
                     <tfoot>
                         <tr>
                             <td colspan="3" class="text-end fw-bold">Parts Total:</td>
-                            <td class="text-end fw-bold text-success">${{ "%.2f"|format(parts_total.value) }}</td>
+                            <td class="text-end fw-bold text-success">{{ currency_symbol }}{{ "%.2f"|format(parts_total.value) }}</td>
                         </tr>
                     </tfoot>
                 </table>
@@ -253,7 +253,7 @@
                         <p class="text-muted mb-0">Combined services and parts</p>
                     </div>
                     <div class="text-end">
-                        <span class="fs-2 fw-bold text-success">${{ "%.2f"|format(data.total_cost|float) }}</span>
+                        <span class="fs-2 fw-bold text-success">{{ currency_symbol }}{{ "%.2f"|format(data.total_cost|float) }}</span>
                         <div class="mt-1">
                             {% if data.paid %}
                                 <span class="badge bg-success">

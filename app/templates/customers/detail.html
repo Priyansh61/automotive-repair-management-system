@@ -61,10 +61,10 @@
         <div class="card">
             <div class="card-body">
                 <div class="d-flex align-items-center mb-2">
-                    <span class="badge bg-info-lt me-2"><i class="ti ti-currency-dollar"></i></span>
+                    <span class="badge bg-info-lt me-2"><i class="ti {{ currency_icon }}"></i></span>
                     <div class="subheader">Total Revenue</div>
                 </div>
-                <div class="h1 mb-0">${{ "%.2f"|format(stats.total_revenue|default(0)|float) }}</div>
+                <div class="h1 mb-0">{{ currency_symbol }}{{ "%.2f"|format(stats.total_revenue|default(0)|float) }}</div>
             </div>
         </div>
     </div>
@@ -75,7 +75,7 @@
                     <span class="badge bg-danger-lt me-2"><i class="ti ti-alert-triangle"></i></span>
                     <div class="subheader">Unpaid Amount</div>
                 </div>
-                <div class="h1 mb-0">${{ "%.2f"|format(stats.unpaid_amount|default(0)|float) }}</div>
+                <div class="h1 mb-0">{{ currency_symbol }}{{ "%.2f"|format(stats.unpaid_amount|default(0)|float) }}</div>
             </div>
         </div>
     </div>
@@ -158,7 +158,7 @@
                                 </a>
                             </td>
                             <td>{{ job.job_date.strftime('%b %d, %Y') if job.job_date else 'N/A' }}</td>
-                            <td><span class="fw-semibold text-success">${{ "%.2f"|format(job.total_cost|float) }}</span></td>
+                            <td><span class="fw-semibold text-success">{{ currency_symbol }}{{ "%.2f"|format(job.total_cost|float) }}</span></td>
                             <td>
                                 {% if job.completed %}
                                 <span class="badge bg-success"><i class="ti ti-circle-check me-1"></i>Completed</span>

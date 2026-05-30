@@ -119,11 +119,11 @@
         <div class="card">
             <div class="card-body">
                 <div class="d-flex align-items-center mb-2">
-                    <span class="badge bg-success-lt me-2"><i class="ti ti-currency-dollar"></i></span>
+                    <span class="badge bg-success-lt me-2"><i class="ti {{ currency_icon }}"></i></span>
                     <div class="subheader">Total Revenue</div>
                 </div>
-                <div class="h1 mb-0">${{ "%.0f"|format(billing_stats.get('total_revenue', 0)) }}</div>
-                <small class="text-warning">${{ "%.0f"|format(billing_stats.get('unpaid_amount', 0)) }} unpaid</small>
+                <div class="h1 mb-0">{{ currency_symbol }}{{ "%.0f"|format(billing_stats.get('total_revenue', 0)) }}</div>
+                <small class="text-warning">{{ currency_symbol }}{{ "%.0f"|format(billing_stats.get('unpaid_amount', 0)) }} unpaid</small>
             </div>
         </div>
     </div>
@@ -314,7 +314,7 @@
                                 {% endif %}
                             </td>
                             <td>
-                                <span class="fw-semibold">${{ "%.2f"|format(job.get('total_cost', 0)) }}</span>
+                                <span class="fw-semibold">{{ currency_symbol }}{{ "%.2f"|format(job.get('total_cost', 0)) }}</span>
                                 {% if not job.get('paid') %}
                                 <br><small class="text-warning">Unpaid</small>
                                 {% endif %}
@@ -371,7 +371,7 @@
                         </small>
                     </div>
                     <div class="text-end">
-                        <div class="fw-bold text-danger">${{ "%.2f"|format(bill.get('total_cost', 0)) }}</div>
+                        <div class="fw-bold text-danger">{{ currency_symbol }}{{ "%.2f"|format(bill.get('total_cost', 0)) }}</div>
                         {% if session.current_role in ('owner', 'admin') %}
                         <a href="{{ url_for('administrator.pay_single_bill', job_id=bill.get('job_id', 0)) }}" class="btn btn-sm btn-outline-success mt-1">Pay</a>
                         {% endif %}
@@ -438,7 +438,7 @@
         <div class="text-secondary mt-1">Access Anywhere</div>
     </div>
     <div class="col-6 col-md-3 mb-3">
-        <div class="metric-number">$0</div>
+        <div class="metric-number">{{ currency_symbol }}0</div>
         <div class="text-secondary mt-1">To Get Started</div>
     </div>
 </div>

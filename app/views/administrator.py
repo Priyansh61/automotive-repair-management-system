@@ -9,7 +9,7 @@ import logging
 from app.services.customer_service import CustomerService
 from app.services.job_service import JobService
 from app.services.billing_service import BillingService
-from app.utils.decorators import handle_database_errors, log_function_call, validate_pagination
+from app.utils.decorators import handle_database_errors, log_function_call, validate_pagination, login_required
 from app.utils.validators import sanitize_input, validate_positive_integer, validate_service_data, validate_part_data
 
 # Create blueprint
@@ -260,7 +260,7 @@ def add_service():
         db.session.rollback()
         flash('Failed to add service', 'error')
 
-    return redirect(url_for('administrator.customer_list'))
+    return redirect(url_for('administrator.service_catalog'))
 
 
 @administrator_bp.route('/add_part', methods=['POST'])
@@ -302,7 +302,7 @@ def add_part():
         db.session.rollback()
         flash('Failed to add part', 'error')
 
-    return redirect(url_for('administrator.customer_list'))
+    return redirect(url_for('administrator.parts_catalog'))
 
 
 @administrator_bp.route('/schedule_job', methods=['POST'])
@@ -573,6 +573,7 @@ def reports():
 
 # API endpoints
 @administrator_bp.route('/api/customers/<int:customer_id>/billing-summary')
+@login_required
 @handle_database_errors
 def api_customer_billing_summary(customer_id):
     """API: Get customer billing summary"""
@@ -586,6 +587,7 @@ def api_customer_billing_summary(customer_id):
 
 
 @administrator_bp.route('/api/billing/statistics')
+@login_required
 @handle_database_errors
 def api_billing_statistics():
     """API: Get billing statistics"""
@@ -599,6 +601,7 @@ def api_billing_statistics():
 
 
 @administrator_bp.route('/api/dashboard/summary')
+@login_required
 @handle_database_errors
 def api_dashboard_summary():
     """API: Get dashboard summary"""
@@ -633,17 +636,39 @@ def api_dashboard_summary():
 
 
 @administrator_bp.route('/api/export/customers')
+@login_required
 @handle_database_errors
 def api_export_customers():
     """API: Export customer data"""
     try:
-        customers = customer_service.get_all_customers()
-        customer_data = []
+        from app.models.job import Job
+        from datetime import date, timedelta
 
+        customers = customer_service.get_all_customers()
+        tenant_id = session.get('current_tenant_id') or getattr(g, 'current_tenant_id', None)
+        threshold = date.today() - timedelta(days=14)
+
+        # Single query: unpaid totals per customer
+        unpaid_rows = db.session.execute(
+            db.select(Job.customer, db.func.coalesce(db.func.sum(Job.total_cost), 0).label('unpaid_total'))
+            .where(Job.paid == False, Job.tenant_id == tenant_id)
+            .group_by(Job.customer)
+        ).all()
+        unpaid_totals = {row.customer: float(row.unpaid_total) for row in unpaid_rows}
+
+        # Single query: customers with overdue jobs
+        overdue_rows = db.session.execute(
+            db.select(Job.customer)
+            .where(Job.paid == False, Job.job_date < threshold, Job.tenant_id == tenant_id)
+            .distinct()
+        ).scalars().all()
+        overdue_set = set(overdue_rows)
+
+        customer_data = []
         for c in customers:
             customer_info = c.to_dict()
-            customer_info['total_unpaid'] = c.get_total_unpaid_amount()
-            customer_info['has_overdue'] = c.has_overdue_bills()
+            customer_info['total_unpaid'] = unpaid_totals.get(c.customer_id, 0.0)
+            customer_info['has_overdue'] = c.customer_id in overdue_set
             customer_data.append(customer_info)
 
         return jsonify({
@@ -658,6 +683,7 @@ def api_export_customers():
 
 
 @administrator_bp.route('/api/customers/<int:customer_id>/summary')
+@login_required
 @handle_database_errors
 def api_customer_summary(customer_id):
     """API: Get customer summary"""
@@ -702,12 +728,16 @@ def org_settings():
 
     if request.method == 'POST':
         try:
-            tenant.name = sanitize_input(request.form.get('name', tenant.name))
-            tenant.email = sanitize_input(request.form.get('email', '')) or tenant.email
-            tenant.phone = sanitize_input(request.form.get('phone', '')) or tenant.phone
-            tenant.address = sanitize_input(request.form.get('address', '')) or tenant.address
+            from sqlalchemy.orm.attributes import flag_modified
 
-            settings = tenant.settings or {}
+            tenant.name = sanitize_input(request.form.get('name', tenant.name))
+            tenant.email = sanitize_input(request.form.get('email', '')) or None
+            tenant.phone = sanitize_input(request.form.get('phone', '')) or None
+            tenant.address = sanitize_input(request.form.get('address', '')) or None
+            tenant.logo_url = sanitize_input(request.form.get('logo_url', '')) or None
+
+            # Build a new dict so SQLAlchemy detects the JSON column as changed
+            settings = dict(tenant.settings or {})
             tax_rate = request.form.get('tax_rate')
             if tax_rate:
                 try:
@@ -716,6 +746,7 @@ def org_settings():
                     pass
             settings['currency'] = sanitize_input(request.form.get('currency', 'USD'))
             tenant.settings = settings
+            flag_modified(tenant, 'settings')
 
             session['current_tenant_name'] = tenant.name
             db.session.commit()

@@ -96,7 +96,7 @@
             <div class="card">
                 <div class="card-header" style="background: var(--info); color: white;">
                     <h5 class="card-title mb-0 d-flex align-items-center gap-2" style="color: white;">
-                        <i class="ti ti-currency-dollar"></i>
+                        <i class="ti {{ currency_icon }}"></i>
                         Billing Statistics
                     </h5>
                 </div>
@@ -105,25 +105,25 @@
                     <div class="row g-4">
                         <div class="col-md-3">
                             <div class="text-center p-3 rounded" style="background: var(--primary-bg);">
-                                <div class="h2 mb-0 text-primary">${{ "%.2f"|format(bs.total_revenue|default(0)|float) }}</div>
+                                <div class="h2 mb-0 text-primary">{{ currency_symbol }}{{ "%.2f"|format(bs.total_revenue|default(0)|float) }}</div>
                                 <small class="text-muted">Total Revenue</small>
                             </div>
                         </div>
                         <div class="col-md-3">
                             <div class="text-center p-3 rounded" style="background: rgba(22,163,74,0.1);">
-                                <div class="h2 mb-0 text-success">${{ "%.2f"|format(bs.total_paid|default(0)|float) }}</div>
+                                <div class="h2 mb-0 text-success">{{ currency_symbol }}{{ "%.2f"|format(bs.total_paid|default(0)|float) }}</div>
                                 <small class="text-muted">Collected</small>
                             </div>
                         </div>
                         <div class="col-md-3">
                             <div class="text-center p-3 rounded" style="background: rgba(245,158,11,0.1);">
-                                <div class="h2 mb-0 text-warning">${{ "%.2f"|format(bs.total_unpaid|default(0)|float) }}</div>
+                                <div class="h2 mb-0 text-warning">{{ currency_symbol }}{{ "%.2f"|format(bs.total_unpaid|default(0)|float) }}</div>
                                 <small class="text-muted">Outstanding</small>
                             </div>
                         </div>
                         <div class="col-md-3">
                             <div class="text-center p-3 rounded" style="background: rgba(220,38,38,0.1);">
-                                <div class="h2 mb-0 text-danger">${{ "%.2f"|format(bs.total_overdue|default(0)|float) }}</div>
+                                <div class="h2 mb-0 text-danger">{{ currency_symbol }}{{ "%.2f"|format(bs.total_overdue|default(0)|float) }}</div>
                                 <small class="text-muted">Overdue</small>
                             </div>
                         </div>

@@ -57,10 +57,10 @@
         <div class="card">
             <div class="card-body">
                 <div class="d-flex align-items-center mb-2">
-                    <span class="badge bg-success-lt me-2"><i class="ti ti-currency-dollar"></i></span>
+                    <span class="badge bg-success-lt me-2"><i class="ti {{ currency_icon }}"></i></span>
                     <div class="subheader">Total Value</div>
                 </div>
-                <div class="h1 mb-0">${{ "%.0f"|format(data|sum(attribute='total_cost') or 0) }}</div>
+                <div class="h1 mb-0">{{ currency_symbol }}{{ "%.0f"|format(data|sum(attribute='total_cost') or 0) }}</div>
             </div>
         </div>
     </div>
@@ -176,7 +176,7 @@
                                 </div>
                             </td>
                             <td>
-                                <span class="fw-semibold text-success">${{ "%.2f"|format(record.total_cost) }}</span>
+                                <span class="fw-semibold text-success">{{ currency_symbol }}{{ "%.2f"|format(record.total_cost) }}</span>
                             </td>
                             <td>
                                 {% if record.paid == 1 %}

@@ -18,17 +18,16 @@ def handle_database_errors(func: Callable) -> Callable:
         try:
             return func(*args, **kwargs)
         except DatabaseError as e:
-            logging.error(f"Database error in {func.__name__}: {e}")
+            logging.error(f"Database error in {func.__name__}: {e}", exc_info=True)
             flash(f"Database operation failed: {e}", 'error')
-            return None
         except ValidationError as e:
-            logging.warning(f"Validation error in {func.__name__}: {e}")
+            logging.warning(f"Validation error in {func.__name__}: {e}", exc_info=True)
             flash(f"Data validation failed: {e}", 'warning')
-            return None
         except Exception as e:
-            logging.error(f"Unknown error in {func.__name__}: {e}")
+            logging.error(f"Unknown error in {func.__name__}: {e}", exc_info=True)
             flash("System error, please try again later", 'error')
-            return None
+        # Return to dashboard instead of None (which breaks Flask)
+        return redirect(url_for('main.dashboard'))
 
     return wrapper
 

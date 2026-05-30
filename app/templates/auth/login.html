@@ -93,6 +93,7 @@
                 {% endif %}
                 {% endwith %}
 
+                {% if not local_dev %}
                 <!-- Google Sign In -->
                 <div class="mb-4">
                     <button type="button" id="googleSignInBtn" class="btn w-100 d-flex align-items-center justify-content-center gap-2" style="background: white; border: 1px solid #dadce0; color: #3c4043; padding: 0.625rem;">
@@ -109,6 +110,12 @@
                 <div class="text-center text-muted mb-4 d-flex align-items-center gap-2">
                     <hr class="flex-fill"><span class="text-sm">or</span><hr class="flex-fill">
                 </div>
+                {% else %}
+                <div class="alert alert-warning d-flex align-items-center gap-2 mb-4 py-2">
+                    <i class="ti ti-flask"></i>
+                    <small><strong>Local dev mode</strong> — use email &amp; password below</small>
+                </div>
+                {% endif %}
 
                 <!-- Auth Tabs -->
                 <div class="d-flex border-bottom mb-4">
@@ -118,7 +125,7 @@
 
                 <!-- Sign In Tab -->
                 <div id="signin-content" class="auth-tab-content active">
-                    <form id="signinForm" novalidate>
+                    <form id="signinForm" novalidate data-no-loading-state="true">
                         <div class="mb-3">
                             <label for="signin-email" class="form-label">Email</label>
                             <div class="input-group">
@@ -154,7 +161,7 @@
 
                 <!-- Create Account Tab -->
                 <div id="signup-content" class="auth-tab-content">
-                    <form id="signupForm" novalidate>
+                    <form id="signupForm" novalidate data-no-loading-state="true">
                         <div class="mb-3">
                             <label for="signup-name" class="form-label">Full Name</label>
                             <div class="input-group">
@@ -401,7 +408,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Google Sign In
-    document.getElementById('googleSignInBtn').addEventListener('click', async function() {
+    document.getElementById('googleSignInBtn')?.addEventListener('click', async function() {
         if (!window.neonAuth) {
             showMessage('Authentication service not configured. Please try again later.', 'error');
             return;
@@ -431,11 +438,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
         setLoading(btn, true);
         try {
-            if (window.neonAuth) {
-                const result = await window.neonAuth.signInWithEmailPassword(email, password);
-                if (result.success) {
-                    window.location.href = result.redirect;
-                    return;
+            if (window.neonAuth && !{{ 'true' if local_dev else 'false' }}) {
+                try {
+                    const result = await window.neonAuth.signInWithEmailPassword(email, password);
+                    if (result.success) {
+                        window.location.href = result.redirect;
+                        return;
+                    }
+                } catch (_neonErr) {
+                    // Neon Auth failed — fall through to local auth
                 }
             }
             // Fallback: local auth (dev mode / no Neon Auth configured)
@@ -490,6 +501,27 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
+        {% if local_dev %}
+        // Local dev: hit the backend signup endpoint directly
+        setLoading(btn, true);
+        try {
+            const res = await fetch('/auth/signup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, email, password, confirm })
+            });
+            const data = await res.json();
+            if (res.ok && data.redirect) {
+                window.location.href = data.redirect;
+            } else {
+                showMessage(data.error || 'Sign up failed.', 'error');
+                setLoading(btn, false);
+            }
+        } catch (err) {
+            showMessage('Sign up failed. Please try again.', 'error');
+            setLoading(btn, false);
+        }
+        {% else %}
         if (!window.neonAuth) {
             showMessage('Authentication service not configured.', 'error');
             return;
@@ -509,6 +541,7 @@ document.addEventListener('DOMContentLoaded', function() {
             showMessage(error.message || 'Sign up failed. Please try again.', 'error');
             setLoading(btn, false);
         }
+        {% endif %}
     });
 
     // Back button on verification overlay

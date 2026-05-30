@@ -20,6 +20,71 @@ logger = logging.getLogger(__name__)
 # LOCAL LOGIN (dev fallback — no Neon Auth required)
 # =============================================================================
 
+@auth_bp.route('/signup', methods=['POST'])
+def local_signup():
+    """Create a new user account for local development (no Neon Auth required)."""
+    from werkzeug.security import generate_password_hash
+    data = request.get_json(silent=True) or request.form
+    name = (data.get('name') or '').strip()
+    email = (data.get('email') or '').strip().lower()
+    password = data.get('password') or ''
+
+    confirm = data.get('confirm') or ''
+
+    if not name or not email or not password:
+        return jsonify({'error': 'Name, email and password are required'}), 400
+
+    if confirm and password != confirm:
+        return jsonify({'error': 'Passwords do not match'}), 400
+
+    if len(password) < 8:
+        return jsonify({'error': 'Password must be at least 8 characters'}), 400
+
+    existing = db.session.execute(
+        db.select(User).where(User.email == email)
+    ).scalar_one_or_none()
+
+    if existing and existing.is_active:
+        return jsonify({'error': 'An account with this email already exists'}), 400
+
+    if existing and not existing.is_active:
+        # Placeholder created by an invite — activate it instead
+        existing.password_hash = generate_password_hash(password)
+        existing.is_active = True
+        existing.email_verified = True
+        if name and not existing.username:
+            existing.username = name
+        db.session.commit()
+        user = existing
+    else:
+        base_username = (name or email.split('@')[0]).replace(' ', '_').lower()
+        username = base_username
+        counter = 1
+        while db.session.execute(db.select(User).where(User.username == username)).scalar_one_or_none():
+            username = f"{base_username}{counter}"
+            counter += 1
+        user = User(
+            email=email,
+            username=username,
+            password_hash=generate_password_hash(password),
+            is_active=True,
+            email_verified=True,
+        )
+        db.session.add(user)
+        db.session.commit()
+
+    auth_service = AuthService()
+    session['user_id'] = user.user_id
+    session['username'] = user.username
+    session['logged_in'] = True
+    session['auth_method'] = 'local'
+    user.update_last_login()
+    db.session.commit()
+
+    redirect_url = auth_service.resolve_post_auth_redirect(user.user_id)
+    return jsonify({'redirect': redirect_url})
+
+
 @auth_bp.route('/login', methods=['POST'])
 def local_login():
     """Traditional email/password login for local development."""
@@ -102,9 +167,10 @@ def activate_account():
 @auth_bp.route('/login')
 def login():
     """Render the login/signup page"""
-    if session.get('logged_in'):
+    if session.get('logged_in') and session.get('current_tenant_id'):
         return redirect(url_for('main.dashboard'))
-    return render_template('auth/login.html')
+    local_dev = current_app.config.get('LOCAL_DEV', False)
+    return render_template('auth/login.html', local_dev=local_dev)
 
 
 # =============================================================================
@@ -200,7 +266,7 @@ def neon_callback():
 
     except Exception as e:
         logger.error(f"Neon callback error: {e}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Authentication failed. Please try again.'}), 500
 
 
 # =============================================================================

@@ -84,17 +84,29 @@ def _configure_database(app, config):
         )
 
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    app.config['SQLALCHEMY_ECHO'] = app.config.get('DEBUG', False)
+    app.config['SQLALCHEMY_ECHO'] = False  # SQL logging handled by logger config (LOG_SQL=true to enable)
 
     sslmode = getattr(config, 'DB_SSLMODE', 'require')
+    connect_args = {}
     if sslmode and sslmode != 'disable':
-        app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-            'connect_args': {'sslmode': sslmode},
-            'pool_pre_ping': True,
-            'pool_size': 5,
-            'max_overflow': 10,
-            'pool_recycle': 300,
-        }
+        connect_args['sslmode'] = sslmode
+
+    # If DATABASE_URL contains a `host=` query param (Unix socket path),
+    # extract it and pass via connect_args so psycopg2 honours it.
+    db_uri = app.config.get('SQLALCHEMY_DATABASE_URI', '')
+    if '?host=' in db_uri or '&host=' in db_uri:
+        from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
+        parsed = urlparse(db_uri)
+        qs = parse_qs(parsed.query)
+        if 'host' in qs:
+            connect_args['host'] = qs.pop('host')[0]
+            new_query = urlencode({k: v[0] for k, v in qs.items()})
+            app.config['SQLALCHEMY_DATABASE_URI'] = urlunparse(parsed._replace(query=new_query))
+
+    engine_opts = {'pool_pre_ping': True, 'pool_size': 5, 'max_overflow': 10, 'pool_recycle': 300}
+    if connect_args:
+        engine_opts['connect_args'] = connect_args
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = engine_opts
 
 
 def init_extensions(app):
@@ -174,6 +186,33 @@ def register_security_middleware(app):
     @app.context_processor
     def inject_csrf_token():
         return {'csrf_token': CSRFProtection.generate_token}
+
+    @app.context_processor
+    def inject_currency():
+        """Inject currency symbol and icon for the current tenant"""
+        from flask import session, g
+        symbols = {
+            'USD': '$', 'EUR': '€', 'GBP': '£',
+            'CAD': 'CA$', 'AUD': 'A$', 'INR': '₹',
+        }
+        icons = {
+            'USD': 'ti-currency-dollar', 'EUR': 'ti-currency-euro',
+            'GBP': 'ti-currency-pound', 'CAD': 'ti-currency-dollar',
+            'AUD': 'ti-currency-dollar', 'INR': 'ti-currency-rupee',
+        }
+        currency = 'USD'
+        try:
+            # Use g.current_tenant already loaded by middleware — no extra DB query
+            tenant = getattr(g, 'current_tenant', None)
+            if tenant and tenant.settings:
+                currency = tenant.settings.get('currency', 'USD')
+        except Exception:
+            pass
+        return {
+            'currency_symbol': symbols.get(currency, '$'),
+            'currency_icon': icons.get(currency, 'ti-currency-dollar'),
+            'currency_code': currency,
+        }
 
     @app.context_processor
     def inject_notifications():

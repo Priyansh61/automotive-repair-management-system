@@ -424,14 +424,17 @@ class AuthService:
 
         if len(memberships) == 1:
             # Auto-select the single tenant
-            self.establish_tenant_session(user_id, memberships[0]['tenant_id'])
+            ok = self.establish_tenant_session(user_id, memberships[0]['tenant_id'])
+            if not ok:
+                return url_for('auth.no_organization')
             return url_for('main.dashboard')
 
         # Multiple memberships - try default first
         default = next((m for m in memberships if m['is_default']), None)
         if default:
-            self.establish_tenant_session(user_id, default['tenant_id'])
-            return url_for('main.dashboard')
+            ok = self.establish_tenant_session(user_id, default['tenant_id'])
+            if ok:
+                return url_for('main.dashboard')
 
         return url_for('auth.select_tenant')
 

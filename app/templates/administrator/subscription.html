@@ -11,15 +11,11 @@
     <!-- Page Header -->
     <div class="row mb-4">
         <div class="col-12">
-            <div class="d-flex align-items-center justify-content-between">
-                <div>
-                    <h1 class="h3 mb-0 d-flex align-items-center gap-2">
-                        <i class="ti ti-crown text-warning"></i>
-                        Subscription Management
-                    </h1>
-                    <p class="text-muted mb-0">Manage your plan and usage</p>
-                </div>
-            </div>
+            <h1 class="h3 mb-0 d-flex align-items-center gap-2">
+                <i class="ti ti-crown text-warning"></i>
+                Subscription Management
+            </h1>
+            <p class="text-muted mb-0">Manage your plan and billing</p>
         </div>
     </div>
 
@@ -32,25 +28,34 @@
                         <i class="ti ti-package text-primary"></i>
                         Current Plan
                     </h5>
+
+                    {% if subscription %}
                     <div class="text-center mb-4">
-                        <div class="h2 fw-bold text-primary">{{ current_plan.name|default('Free') }}</div>
-                        <span class="badge {% if current_plan.status|default('active') == 'active' %}bg-success{% else %}bg-warning{% endif %}">
-                            <i class="ti ti-{% if current_plan.status|default('active') == 'active' %}circle-check{% else %}clock{% endif %} me-1"></i>
-                            {{ current_plan.status|default('Active')|title }}
+                        <div class="h2 fw-bold text-primary text-capitalize">{{ subscription.plan }}</div>
+                        <span class="badge {% if subscription.status == 'active' %}bg-success{% elif subscription.status == 'trialing' %}bg-info{% else %}bg-warning{% endif %}">
+                            <i class="ti ti-{% if subscription.status == 'active' %}circle-check{% elif subscription.status == 'trialing' %}clock{% else %}alert-triangle{% endif %} me-1"></i>
+                            {{ subscription.status|title }}
                         </span>
                     </div>
-                    {% if current_plan.renewal_date is defined %}
+                    {% if subscription.current_period_end %}
                     <div class="d-flex justify-content-between py-2 border-bottom">
-                        <span class="text-muted">Next Renewal</span>
-                        <span class="fw-semibold">{{ current_plan.renewal_date }}</span>
+                        <span class="text-muted">Period Ends</span>
+                        <span class="fw-semibold">{{ subscription.current_period_end.strftime('%b %d, %Y') }}</span>
                     </div>
                     {% endif %}
-                    {% if current_plan.price is defined %}
+                    {% if subscription.stripe_customer_id %}
                     <div class="d-flex justify-content-between py-2 border-bottom">
-                        <span class="text-muted">Monthly Cost</span>
-                        <span class="fw-semibold">${{ "%.2f"|format(current_plan.price|float) }}</span>
+                        <span class="text-muted">Billing</span>
+                        <span class="fw-semibold">Stripe managed</span>
                     </div>
                     {% endif %}
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="ti ti-credit-card-off text-muted" style="font-size: 3rem;"></i>
+                        <p class="text-muted mt-2">No active subscription</p>
+                    </div>
+                    {% endif %}
+
                     <div class="mt-4 d-flex gap-2">
                         <a href="#" class="btn btn-primary flex-fill">
                             <i class="ti ti-arrow-up-circle me-1"></i>
@@ -58,68 +63,43 @@
                         </a>
                         <a href="#" class="btn btn-outline-secondary flex-fill">
                             <i class="ti ti-settings me-1"></i>
-                            Manage
+                            Manage Billing
                         </a>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Usage Statistics -->
+        <!-- Organization Info -->
         <div class="col-lg-6">
             <div class="card h-100">
                 <div class="card-body p-4">
                     <h5 class="fw-bold d-flex align-items-center gap-2 mb-4">
-                        <i class="ti ti-chart-bar text-info"></i>
-                        Usage Statistics
+                        <i class="ti ti-building text-info"></i>
+                        Organization
                     </h5>
-
-                    <!-- Customers Usage -->
-                    <div class="mb-4">
-                        <div class="d-flex justify-content-between mb-1">
-                            <span class="fw-semibold">Customers</span>
-                            <span class="text-muted">{{ usage.customers|default(0) }} / {{ usage.customers_limit|default('Unlimited') }}</span>
-                        </div>
-                        <div class="progress" style="height: 8px;">
-                            {% set cust_pct = ((usage.customers|default(0) / usage.customers_limit|default(1)) * 100) if usage.customers_limit|default(0) else 0 %}
-                            <div class="progress-bar bg-primary" style="width: {{ cust_pct }}%"></div>
-                        </div>
+                    {% if tenant %}
+                    <div class="d-flex justify-content-between py-2 border-bottom">
+                        <span class="text-muted">Name</span>
+                        <span class="fw-semibold">{{ tenant.name }}</span>
                     </div>
-
-                    <!-- Jobs Usage -->
-                    <div class="mb-4">
-                        <div class="d-flex justify-content-between mb-1">
-                            <span class="fw-semibold">Jobs This Month</span>
-                            <span class="text-muted">{{ usage.jobs_this_month|default(0) }} / {{ usage.jobs_limit|default('Unlimited') }}</span>
-                        </div>
-                        <div class="progress" style="height: 8px;">
-                            {% set job_pct = ((usage.jobs_this_month|default(0) / usage.jobs_limit|default(1)) * 100) if usage.jobs_limit|default(0) else 0 %}
-                            <div class="progress-bar bg-success" style="width: {{ job_pct }}%"></div>
-                        </div>
+                    <div class="d-flex justify-content-between py-2 border-bottom">
+                        <span class="text-muted">Slug</span>
+                        <span class="fw-semibold text-muted">{{ tenant.slug }}</span>
                     </div>
-
-                    <!-- Team Members Usage -->
-                    <div class="mb-4">
-                        <div class="d-flex justify-content-between mb-1">
-                            <span class="fw-semibold">Team Members</span>
-                            <span class="text-muted">{{ usage.team_members|default(0) }} / {{ usage.team_limit|default('Unlimited') }}</span>
-                        </div>
-                        <div class="progress" style="height: 8px;">
-                            {% set team_pct = ((usage.team_members|default(0) / usage.team_limit|default(1)) * 100) if usage.team_limit|default(0) else 0 %}
-                            <div class="progress-bar bg-warning" style="width: {{ team_pct }}%"></div>
-                        </div>
+                    <div class="d-flex justify-content-between py-2 border-bottom">
+                        <span class="text-muted">Status</span>
+                        <span class="badge {% if tenant.status == 'active' %}bg-success{% else %}bg-warning{% endif %}">{{ tenant.status|title }}</span>
                     </div>
-
-                    <!-- Storage Usage -->
-                    <div class="mb-2">
-                        <div class="d-flex justify-content-between mb-1">
-                            <span class="fw-semibold">Storage</span>
-                            <span class="text-muted">{{ usage.storage_used|default('0 MB') }} / {{ usage.storage_limit|default('1 GB') }}</span>
-                        </div>
-                        <div class="progress" style="height: 8px;">
-                            <div class="progress-bar bg-info" style="width: {{ usage.storage_pct|default(0) }}%"></div>
-                        </div>
+                    {% if tenant.trial_ends_at %}
+                    <div class="d-flex justify-content-between py-2 border-bottom">
+                        <span class="text-muted">Trial Ends</span>
+                        <span class="fw-semibold">{{ tenant.trial_ends_at.strftime('%b %d, %Y') }}</span>
                     </div>
+                    {% endif %}
+                    {% else %}
+                    <p class="text-muted">No organization data available.</p>
+                    {% endif %}
                 </div>
             </div>
         </div>
