@@ -241,10 +241,10 @@
           {% if not job_completed %}
           <div class="jf-add-row">
             <form method="POST" action="{{ url_for('technician.add_service_to_job', job_id=data.job_id) }}"
-                  class="d-flex gap-2 flex-grow-1 align-items-end flex-wrap">
+                  class="d-flex gap-2 flex-grow-1 align-items-end flex-wrap" id="addServiceForm">
               <div class="flex-grow-1" style="min-width:200px;">
                 <label class="jf-label">Service</label>
-                <select class="jf-input" name="service_id" required>
+                <select class="jf-input" name="service_id" id="serviceSelect" required>
                   <option value="">Select service…</option>
                   {% for s in all_services %}
                   <option value="{{ s.service_id }}">{{ s.service_name }} — {{ currency_symbol }}{{ "%.2f"|format(s.cost|float) }}</option>
@@ -312,10 +312,10 @@
           {% if not job_completed %}
           <div class="jf-add-row">
             <form method="POST" action="{{ url_for('technician.add_part_to_job', job_id=data.job_id) }}"
-                  class="d-flex gap-2 flex-grow-1 align-items-end flex-wrap">
+                  class="d-flex gap-2 flex-grow-1 align-items-end flex-wrap" id="addPartForm">
               <div class="flex-grow-1" style="min-width:200px;">
                 <label class="jf-label">Part</label>
-                <select class="jf-input" name="part_id" required>
+                <select class="jf-input" name="part_id" id="partSelect" required>
                   <option value="">Select part…</option>
                   {% for p in all_parts %}
                   <option value="{{ p.part_id }}">{{ p.part_name }} — {{ currency_symbol }}{{ "%.2f"|format(p.cost|float) }}</option>
@@ -335,34 +335,40 @@
         </div>
       </div>
 
-      <!-- Cost + Complete -->
-      <div class="row g-3 jf-animate d4">
-        <div class="col-sm-5">
-          <div class="jf-cost-box">
+      <!-- Cost summary -->
+      <div class="jf-cost-box jf-animate d4">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
             <div class="jf-cost-label">Total Cost</div>
             <div class="jf-cost-amount">{{ currency_symbol }}{{ "%.2f"|format(data.total_cost|float) }}</div>
             <div class="jf-cost-sub">Services + Parts</div>
           </div>
-        </div>
-        {% if not data.completed %}
-        <div class="col-sm-7">
-          <div class="jf-card h-100" style="border-color:#fcd34d;">
-            <div class="jf-card-body d-flex flex-column justify-content-between" style="gap:.75rem;">
-              <div class="jf-warning-box">
-                <i class="ti ti-alert-triangle warn-icon"></i>
-                <p class="mb-0" style="font-size:.8125rem;color:#92400e;">
-                  Once completed, no further modifications can be made. Make sure all services and parts are added.
-                </p>
-              </div>
-              <form action="{{ url_for('technician.complete_job', job_id=data.job_id) }}" method="POST">
-                <button type="submit" class="jf-btn accent lg w-100"
-                  onclick="return confirm('Mark this job as completed? This cannot be undone.')">
-                  <i class="ti ti-circle-check"></i> Mark as Completed
-                </button>
-              </form>
-            </div>
+          <div class="d-flex flex-column gap-2 align-items-end">
+            {% if data.paid %}
+              <span class="jf-badge green" style="font-size:.875rem;padding:.4rem .875rem;">
+                <i class="ti ti-credit-card"></i> Paid
+              </span>
+            {% else %}
+              <span class="jf-badge" style="background:rgba(255,255,255,.15);color:#fff;font-size:.875rem;padding:.4rem .875rem;">
+                <i class="ti ti-clock"></i> Unpaid
+              </span>
+            {% endif %}
           </div>
         </div>
+      </div>
+
+      <!-- Action row -->
+      <div class="d-flex justify-content-between align-items-center mt-3 jf-animate d4">
+        <a href="{{ url_for('technician.current_jobs') }}" class="jf-btn ghost">
+          <i class="ti ti-arrow-left"></i> Save & Back to Jobs
+        </a>
+        {% if not data.completed %}
+        <form action="{{ url_for('technician.complete_job', job_id=data.job_id) }}" method="POST" class="d-inline">
+          <button type="submit" class="jf-btn accent lg"
+            onclick="return confirm('Mark this job as completed? This cannot be undone.')">
+            <i class="ti ti-circle-check"></i> Mark as Completed
+          </button>
+        </form>
         {% endif %}
       </div>
 
@@ -372,7 +378,17 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="{{ url_for('static', filename='js/searchable-select.js') }}"></script>
 <script>
+/* ── Searchable selects for service and part ── */
+document.addEventListener('DOMContentLoaded', function () {
+  const svcSel = document.getElementById('serviceSelect');
+  const prtSel = document.getElementById('partSelect');
+
+  if (svcSel) new SearchableSelect(svcSel, { placeholder: 'Search service…' });
+  if (prtSel) new SearchableSelect(prtSel, { placeholder: 'Search part…' });
+});
+
 document.querySelectorAll('.jf-complaint-checkbox').forEach(function (cb) {
   cb.addEventListener('change', function () {
     const cid = this.dataset.complaintId;

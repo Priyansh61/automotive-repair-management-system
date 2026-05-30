@@ -694,3 +694,35 @@
   align-items: flex-start;
 }
 .jf-warning-box .warn-icon { color: #d97706; font-size: 1.125rem; margin-top: 1px; flex-shrink: 0; }
+
+/* ── Fuel type pills ──────────────────────────────────── */
+.fuel-pill {
+  padding: .375rem .875rem;
+  border: 1.5px solid var(--jf-border);
+  border-radius: 100px;
+  background: var(--jf-bg);
+  color: #475569;
+  font-size: .8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--jf-transition);
+}
+.fuel-pill:hover {
+  border-color: var(--jf-blue);
+  color: var(--jf-blue);
+  background: var(--jf-blue-light);
+}
+.fuel-pill.active {
+  border-color: var(--jf-blue);
+  background: var(--jf-blue);
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(30,58,95,.25);
+}
+
+/* ── SearchableSelect highlight ───────────────────────── */
+.ss-wrap { position: relative; }
+.jf-search-results mark {
+  background: #fde68a;
+  border-radius: 2px;
+  padding: 0 1px;
+}

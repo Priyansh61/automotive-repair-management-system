@@ -164,11 +164,13 @@
             <div class="row g-3">
               <div class="col-sm-6">
                 <label class="jf-label">Make <span class="req">*</span></label>
-                <input type="text" class="jf-input" name="vehicle_make" placeholder="Maruti, Toyota…">
+                <!-- hidden input carries the value; SS_Make wires to it -->
+                <input type="hidden" name="vehicle_make" id="vehicleMakeHidden">
+                <div id="vehicleMakeMount"></div>
               </div>
               <div class="col-sm-6">
                 <label class="jf-label">Model <span class="req">*</span></label>
-                <input type="text" class="jf-input" name="vehicle_model" placeholder="Swift, Innova…">
+                <input type="text" class="jf-input" name="vehicle_model" placeholder="e.g. Swift, Innova, Creta…">
               </div>
               <div class="col-sm-4">
                 <label class="jf-label">Year</label>
@@ -180,12 +182,12 @@
               </div>
               <div class="col-sm-4">
                 <label class="jf-label">Fuel Type</label>
-                <select class="jf-input" name="fuel_type">
-                  <option value="">Select…</option>
+                <input type="hidden" name="fuel_type" id="fuelTypeHidden">
+                <div class="fuel-pills d-flex flex-wrap gap-2 mt-1" id="fuelPills">
                   {% for ft in fuel_types %}
-                  <option value="{{ ft }}">{{ ft }}</option>
+                  <button type="button" class="fuel-pill" data-value="{{ ft }}">{{ ft }}</button>
                   {% endfor %}
-                </select>
+                </div>
               </div>
               <div class="col-sm-6">
                 <label class="jf-label">Color</label>
@@ -297,8 +299,37 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="{{ url_for('static', filename='js/searchable-select.js') }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+
+  /* ── Make searchable select ─────────────────────────────── */
+  const makeHidden = document.getElementById('vehicleMakeHidden');
+  const makeMount  = document.getElementById('vehicleMakeMount');
+  // Mount point needs a hidden input for SearchableSelect to replace
+  const makeDummy = document.createElement('select');
+  makeDummy.name = '_make_dummy'; // unused, makeHidden carries the value
+  CAR_MANUFACTURERS.forEach(m => {
+    const o = document.createElement('option');
+    o.value = m; o.textContent = m;
+    makeDummy.appendChild(o);
+  });
+  makeMount.appendChild(makeDummy);
+
+  new SearchableSelect(makeDummy, {
+    placeholder: 'Search manufacturer…',
+    onChange: item => { makeHidden.value = item.value; },
+  });
+
+  /* ── Fuel type pills ────────────────────────────────────── */
+  document.querySelectorAll('.fuel-pill').forEach(pill => {
+    pill.addEventListener('click', function () {
+      document.querySelectorAll('.fuel-pill').forEach(p => p.classList.remove('active'));
+      this.classList.add('active');
+      document.getElementById('fuelTypeHidden').value = this.dataset.value;
+    });
+  });
+
   /* ── state ── */
   let selectedCustomer = null;
   let selectedVehicleId = null;
@@ -509,7 +540,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (vid) return true;
     const panelOpen = document.getElementById('newVehiclePanel').classList.contains('open');
     if (panelOpen) {
-      const make  = document.querySelector('[name=vehicle_make]').value.trim();
+      const make  = document.getElementById('vehicleMakeHidden').value.trim();
       const model = document.querySelector('[name=vehicle_model]').value.trim();
       const plate = document.querySelector('[name=license_plate]').value.trim();
       if (!make || !model || !plate) {
@@ -571,7 +602,7 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('sumVehicle').textContent = name ? name.textContent.trim() : 'Selected';
       }
     } else {
-      const make  = document.querySelector('[name=vehicle_make]')?.value.trim();
+      const make  = document.getElementById('vehicleMakeHidden')?.value.trim();
       const model = document.querySelector('[name=vehicle_model]')?.value.trim();
       const plate = document.querySelector('[name=license_plate]')?.value.trim();
       if (make && model) document.getElementById('sumVehicle').textContent = `${make} ${model}${plate ? ' — '+plate : ''}`;
