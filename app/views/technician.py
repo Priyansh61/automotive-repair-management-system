@@ -7,8 +7,10 @@ from datetime import date, datetime
 import logging
 from app.services.job_service import JobService
 from app.services.customer_service import CustomerService
+from app.services.vehicle_service import VehicleService
 from app.models.service import Service
 from app.models.part import Part
+from app.models.vehicle import FUEL_TYPES
 from app.utils.decorators import handle_database_errors, log_function_call, validate_pagination, login_required
 from app.utils.validators import sanitize_input, validate_positive_integer, validate_date
 
@@ -19,6 +21,7 @@ logger = logging.getLogger(__name__)
 # Initialize services
 job_service = JobService()
 customer_service = CustomerService()
+vehicle_service = VehicleService()
 
 
 def require_technician_login():
@@ -81,6 +84,7 @@ def job_detail(job_id):
                              data=job_details['job_info'],
                              services=job_details['services'],
                              parts=job_details['parts'],
+                             complaints=job_details['complaints'],
                              job_completed=job_details['job_completed'])
 
     except Exception as e:
@@ -113,6 +117,7 @@ def modify_job(job_id):
                              data=job_details['job_info'],
                              services=job_details['services'],
                              parts=job_details['parts'],
+                             complaints=job_details['complaints'],
                              all_services=job_details['all_services'],
                              all_parts=job_details['all_parts'],
                              job_completed=job_details['job_completed'])
@@ -230,9 +235,9 @@ def new_job():
 
     try:
         customers = customer_service.get_all_customers()
-
         return render_template('technician/new_job.html',
                              customers=customers,
+                             fuel_types=FUEL_TYPES,
                              min_date=date.today().isoformat())
 
     except Exception as e:
@@ -249,39 +254,78 @@ def create_job():
     if redirect_response:
         return redirect_response
 
+    def _render_new(errors=None):
+        customers = customer_service.get_all_customers()
+        for e in (errors or []):
+            flash(e, 'error')
+        return render_template('technician/new_job.html',
+                               customers=customers,
+                               fuel_types=FUEL_TYPES,
+                               min_date=date.today().isoformat())
+
     try:
         customer_id = request.form.get('customer_id', type=int)
         job_date_str = sanitize_input(request.form.get('job_date', ''))
 
         if not customer_id or not validate_positive_integer(customer_id):
-            flash('Please select a valid customer', 'error')
-            customers = customer_service.get_all_customers()
-            return render_template('technician/new_job.html',
-                                 customers=customers,
-                                 min_date=date.today().isoformat())
+            return _render_new(['Please select a valid customer'])
 
         if not job_date_str or not validate_date(job_date_str):
-            flash('Please enter a valid work date', 'error')
-            customers = customer_service.get_all_customers()
-            return render_template('technician/new_job.html',
-                                 customers=customers,
-                                 min_date=date.today().isoformat())
+            return _render_new(['Please enter a valid work date'])
 
         job_date = datetime.strptime(job_date_str, '%Y-%m-%d').date()
-
         tenant_id = session.get('current_tenant_id') or getattr(g, 'current_tenant_id', None)
-        success, errors, job = job_service.create_job(customer_id, job_date, tenant_id=tenant_id)
+
+        # --- Vehicle resolution ---
+        vehicle_id = request.form.get('vehicle_id', type=int)
+
+        if not vehicle_id:
+            # Create new vehicle inline
+            make = sanitize_input(request.form.get('vehicle_make', ''))
+            model = sanitize_input(request.form.get('vehicle_model', ''))
+            plate = sanitize_input(request.form.get('license_plate', ''))
+
+            if make and model and plate:
+                year_raw = request.form.get('vehicle_year', '')
+                year = int(year_raw) if year_raw.isdigit() else None
+                fuel_type = request.form.get('fuel_type', '')
+                color = sanitize_input(request.form.get('color', ''))
+
+                ok, v_errors, vehicle = vehicle_service.create_vehicle(
+                    customer_id=customer_id,
+                    make=make,
+                    model=model,
+                    license_plate=plate,
+                    year=year,
+                    color=color or None,
+                    fuel_type=fuel_type or None,
+                    tenant_id=tenant_id,
+                )
+                if not ok:
+                    return _render_new(v_errors)
+                vehicle_id = vehicle.vehicle_id
+
+        # --- Odometer ---
+        odometer_raw = request.form.get('odometer_in', '')
+        odometer_in = int(odometer_raw) if odometer_raw.isdigit() else None
+
+        # --- Complaints ---
+        complaints = [c for c in request.form.getlist('complaints[]') if c.strip()]
+
+        success, errors, job = job_service.create_job(
+            customer_id=customer_id,
+            job_date=job_date,
+            tenant_id=tenant_id,
+            vehicle_id=vehicle_id,
+            odometer_in=odometer_in,
+            complaints=complaints,
+        )
 
         if success:
             flash('Work order created successfully!', 'success')
             return redirect(url_for('technician.modify_job', job_id=job.job_id))
         else:
-            for error in errors:
-                flash(error, 'error')
-            customers = customer_service.get_all_customers()
-            return render_template('technician/new_job.html',
-                                 customers=customers,
-                                 min_date=date.today().isoformat())
+            return _render_new(errors)
 
     except Exception as e:
         logger.error(f"Failed to create work order: {e}")
@@ -366,6 +410,80 @@ def dashboard():
                              current_date=date.today())
 
 
+@technician_bp.route('/jobs/<int:job_id>/complaints', methods=['POST'])
+@handle_database_errors
+def add_complaint(job_id):
+    """Add a complaint item to a job"""
+    redirect_response = require_technician_login()
+    if redirect_response:
+        return redirect_response
+
+    description = sanitize_input(request.form.get('description', ''))
+    if not description:
+        flash('Complaint description cannot be empty', 'error')
+        return redirect(url_for('technician.modify_job', job_id=job_id))
+
+    try:
+        job = job_service.get_job_by_id(job_id)
+        if not job:
+            flash('Work order not found', 'error')
+            return redirect(url_for('technician.current_jobs'))
+        job.add_complaint(description)
+        return redirect(url_for('technician.modify_job', job_id=job_id))
+    except ValueError as e:
+        flash(str(e), 'error')
+        return redirect(url_for('technician.modify_job', job_id=job_id))
+    except Exception as e:
+        logger.error(f"Failed to add complaint: {e}")
+        flash('Failed to add complaint', 'error')
+        return redirect(url_for('technician.modify_job', job_id=job_id))
+
+
+@technician_bp.route('/jobs/<int:job_id>/complaints/<int:complaint_id>/resolve', methods=['POST'])
+@handle_database_errors
+def resolve_complaint(job_id, complaint_id):
+    """Toggle resolved state on a complaint"""
+    redirect_response = require_technician_login()
+    if redirect_response:
+        return redirect_response
+
+    try:
+        job = job_service.get_job_by_id(job_id)
+        if not job:
+            return jsonify({'error': 'Job not found'}), 404
+        job.resolve_complaint(complaint_id)
+        return jsonify({'ok': True})
+    except Exception as e:
+        logger.error(f"Failed to resolve complaint: {e}")
+        return jsonify({'error': 'Failed to update complaint'}), 500
+
+
+@technician_bp.route('/jobs/<int:job_id>/notes', methods=['POST'])
+@handle_database_errors
+def save_technician_notes(job_id):
+    """Save technician notes on a job"""
+    redirect_response = require_technician_login()
+    if redirect_response:
+        return redirect_response
+
+    try:
+        job = job_service.get_job_by_id(job_id)
+        if not job:
+            flash('Work order not found', 'error')
+            return redirect(url_for('technician.current_jobs'))
+
+        notes = sanitize_input(request.form.get('technician_notes', ''))
+        job.technician_notes = notes or None
+        from app.extensions import db
+        db.session.commit()
+        flash('Notes saved', 'success')
+        return redirect(url_for('technician.modify_job', job_id=job_id))
+    except Exception as e:
+        logger.error(f"Failed to save notes: {e}")
+        flash('Failed to save notes', 'error')
+        return redirect(url_for('technician.modify_job', job_id=job_id))
+
+
 # API endpoints
 @technician_bp.route('/api/services')
 @login_required
@@ -401,6 +519,35 @@ def api_get_parts():
     except Exception as e:
         logger.error(f"Failed to get parts API: {e}")
         return jsonify({'error': 'Failed to get parts list'}), 500
+
+
+@technician_bp.route('/api/customers/search')
+@login_required
+@handle_database_errors
+def api_search_customers():
+    """API: Search customers by name"""
+    q = sanitize_input(request.args.get('q', ''))
+    if not q or len(q) < 1:
+        return jsonify([])
+    from app.models.customer import Customer
+    customers = Customer.search_by_name(q)
+    return jsonify([{
+        'customer_id': c.customer_id,
+        'full_name': c.full_name,
+        'first_name': c.first_name or '',
+        'family_name': c.family_name,
+        'email': c.email,
+        'phone': c.phone,
+    } for c in customers[:20]])
+
+
+@technician_bp.route('/api/customers/<int:customer_id>/vehicles')
+@login_required
+@handle_database_errors
+def api_get_customer_vehicles(customer_id):
+    """API: Get vehicles for a customer"""
+    vehicles = vehicle_service.get_vehicles_for_customer(customer_id)
+    return jsonify(vehicles)
 
 
 @technician_bp.route('/api/jobs/<int:job_id>/status')

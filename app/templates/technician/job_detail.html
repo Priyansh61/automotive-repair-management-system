@@ -62,80 +62,117 @@
 </div>
 
 <div class="row">
-    <!-- Customer Information -->
+    <!-- Left column: Customer + Vehicle + Complaints -->
     <div class="col-lg-4 mb-4">
-        <div class="card h-100">
+
+        <!-- Customer Information -->
+        <div class="card mb-4">
             <div class="card-header">
-                <h3 class="card-title">
-                    <i class="ti ti-user me-2"></i>
-                    Customer Information
-                </h3>
+                <h3 class="card-title"><i class="ti ti-user me-2"></i>Customer</h3>
             </div>
             <div class="card-body">
-                <div class="d-flex align-items-center mb-4">
+                <div class="d-flex align-items-center mb-3">
                     <div class="rounded-circle bg-primary bg-opacity-10 p-3 me-3 d-flex align-items-center justify-content-center">
                         <i class="ti ti-user text-primary"></i>
                     </div>
                     <div>
                         <div class="fw-bold fs-5">{{ data.first_name }} {{ data.family_name }}</div>
-                        <small class="text-muted">Customer ID: #{{ data.customer_id }}</small>
+                        <small class="text-muted">ID #{{ data.customer_id }}</small>
                     </div>
                 </div>
-
                 {% if data.email %}
-                <div class="d-flex align-items-center mb-3">
+                <div class="d-flex align-items-center mb-2">
                     <i class="ti ti-mail text-muted me-3"></i>
-                    <div>
-                        <small class="text-muted d-block">Email</small>
-                        <span class="fw-medium">{{ data.email }}</span>
-                    </div>
+                    <span class="fw-medium">{{ data.email }}</span>
                 </div>
                 {% endif %}
-
                 {% if data.phone %}
-                <div class="d-flex align-items-center mb-3">
+                <div class="d-flex align-items-center mb-2">
                     <i class="ti ti-phone text-muted me-3"></i>
-                    <div>
-                        <small class="text-muted d-block">Phone</small>
-                        <span class="fw-medium">{{ data.phone }}</span>
-                    </div>
+                    <span class="fw-medium">{{ data.phone }}</span>
                 </div>
                 {% endif %}
-
-                <hr>
-
-                <div class="d-flex align-items-center mb-3">
+                <hr class="my-2">
+                <div class="d-flex align-items-center mb-2">
                     <i class="ti ti-calendar text-muted me-3"></i>
                     <div>
                         <small class="text-muted d-block">Job Date</small>
                         <span class="fw-medium">{{ data.job_date.strftime('%b %d, %Y') if data.job_date else 'N/A' }}</span>
                     </div>
                 </div>
-
-                <div class="d-flex align-items-center">
-                    <i class="ti ti-tag text-muted me-3"></i>
+                {% if data.odometer_in %}
+                <div class="d-flex align-items-center mb-2">
+                    <i class="ti ti-gauge text-muted me-3"></i>
                     <div>
-                        <small class="text-muted d-block">Status</small>
-                        {% if data.completed %}
-                            <span class="badge bg-success">
-                                <i class="ti ti-circle-check me-1"></i>
-                                Completed
-                            </span>
-                        {% elif data.paid %}
-                            <span class="badge bg-success">
-                                <i class="ti ti-credit-card me-1"></i>
-                                Paid
-                            </span>
-                        {% else %}
-                            <span class="badge bg-warning">
-                                <i class="ti ti-clock me-1"></i>
-                                In Progress
-                            </span>
-                        {% endif %}
+                        <small class="text-muted d-block">Odometer In</small>
+                        <span class="fw-medium">{{ data.odometer_in | int }} km</span>
                     </div>
+                </div>
+                {% endif %}
+                <div class="d-flex gap-2 mt-2">
+                    {% if data.completed %}<span class="badge bg-success"><i class="ti ti-circle-check me-1"></i>Completed</span>
+                    {% else %}<span class="badge bg-warning text-dark"><i class="ti ti-clock me-1"></i>In Progress</span>{% endif %}
+                    {% if data.paid %}<span class="badge bg-success"><i class="ti ti-credit-card me-1"></i>Paid</span>
+                    {% else %}<span class="badge bg-danger"><i class="ti ti-alert-triangle me-1"></i>Unpaid</span>{% endif %}
                 </div>
             </div>
         </div>
+
+        <!-- Vehicle -->
+        {% if data.vehicle %}
+        {% set v = data.vehicle %}
+        <div class="card mb-4">
+            <div class="card-header" style="background:#1e3a5f;color:#fff;">
+                <h3 class="card-title"><i class="ti ti-car me-2"></i>Vehicle</h3>
+            </div>
+            <div class="card-body">
+                <div class="fw-bold fs-5">{{ v.make }} {{ v.model }}{% if v.year %} ({{ v.year }}){% endif %}</div>
+                <div class="text-muted mb-2">{{ v.license_plate }}</div>
+                <div class="d-flex flex-wrap gap-2">
+                    {% if v.fuel_type %}<span class="badge bg-secondary">{{ v.fuel_type }}</span>{% endif %}
+                    {% if v.color %}<span class="badge bg-light text-dark border">{{ v.color }}</span>{% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Reported Problems -->
+        {% if complaints %}
+        <div class="card">
+            <div class="card-header" style="background:#e85d04;color:#fff;">
+                <h3 class="card-title"><i class="ti ti-alert-circle me-2"></i>Reported Problems</h3>
+            </div>
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush">
+                    {% for c in complaints %}
+                    <li class="list-group-item d-flex align-items-center gap-3">
+                        {% if c.is_resolved %}
+                            <i class="ti ti-circle-check text-success flex-shrink-0"></i>
+                            <span class="text-decoration-line-through text-muted flex-grow-1">{{ c.description }}</span>
+                            <span class="badge bg-success">Done</span>
+                        {% else %}
+                            <i class="ti ti-circle text-warning flex-shrink-0"></i>
+                            <span class="flex-grow-1">{{ c.description }}</span>
+                            <span class="badge bg-warning text-dark">Open</span>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if data.technician_notes %}
+        <div class="card mt-4">
+            <div class="card-header bg-secondary text-white">
+                <h3 class="card-title"><i class="ti ti-notes me-2"></i>Technician Notes</h3>
+            </div>
+            <div class="card-body">
+                <p class="mb-0 text-muted" style="white-space:pre-line;">{{ data.technician_notes }}</p>
+            </div>
+        </div>
+        {% endif %}
+
     </div>
 
     <!-- Services & Parts -->

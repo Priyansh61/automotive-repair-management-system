@@ -5,7 +5,7 @@ Work orders with services and parts, multi-tenant scoped
 from typing import List, Optional, Tuple
 from datetime import date, datetime
 from decimal import Decimal
-from sqlalchemy import String, Date, Numeric, Boolean, Integer, ForeignKey, and_
+from sqlalchemy import String, Text, Date, Numeric, Boolean, Integer, ForeignKey, and_
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.ext.hybrid import hybrid_property
 from app.extensions import db
@@ -50,6 +50,20 @@ class JobPart(db.Model):
         return self.part.cost * Decimal(str(self.qty))
 
 
+class JobComplaint(db.Model, BaseModelMixin):
+    """Customer-reported complaints for a job, actionable checklist"""
+
+    __tablename__ = 'job_complaint'
+
+    complaint_id: Mapped[int] = mapped_column(primary_key=True)
+    job_id: Mapped[int] = mapped_column(ForeignKey('job.job_id', ondelete='CASCADE'), nullable=False)
+    description: Mapped[str] = mapped_column(String(300), nullable=False)
+    is_resolved: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+    job: Mapped["Job"] = relationship("Job", back_populates="complaints")
+
+
 class Job(db.Model, BaseModelMixin, TenantScopedMixin):
     """Job (Work Order) model class"""
 
@@ -61,17 +75,24 @@ class Job(db.Model, BaseModelMixin, TenantScopedMixin):
     )
     job_date: Mapped[date] = mapped_column(Date, nullable=False)
     customer: Mapped[int] = mapped_column(ForeignKey('customer.customer_id', onupdate='CASCADE'), nullable=False)
+    vehicle_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey('vehicle.vehicle_id'), nullable=True
+    )
     total_cost: Mapped[Optional[Decimal]] = mapped_column(Numeric(12, 2), nullable=True)
     completed: Mapped[bool] = mapped_column(Boolean, default=False)
     paid: Mapped[bool] = mapped_column(Boolean, default=False)
+    odometer_in: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    technician_notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     assigned_to: Mapped[Optional[int]] = mapped_column(
         Integer, ForeignKey('user.user_id'), nullable=True
     )
 
     # Relationships
     customer_rel: Mapped["Customer"] = relationship("Customer", back_populates="jobs")
+    vehicle_rel: Mapped[Optional["Vehicle"]] = relationship("Vehicle", back_populates="jobs")
     job_services: Mapped[List["JobService"]] = relationship("JobService", back_populates="job", cascade="all, delete-orphan")
     job_parts: Mapped[List["JobPart"]] = relationship("JobPart", back_populates="job", cascade="all, delete-orphan")
+    complaints: Mapped[List["JobComplaint"]] = relationship("JobComplaint", back_populates="job", cascade="all, delete-orphan", order_by="JobComplaint.sort_order")
     assignee: Mapped[Optional["User"]] = relationship("User", foreign_keys=[assigned_to])
     tenant: Mapped[Optional["Tenant"]] = relationship("Tenant", backref="jobs")
 
@@ -213,6 +234,37 @@ class Job(db.Model, BaseModelMixin, TenantScopedMixin):
         db.session.commit()
         return True
 
+    def add_complaint(self, description: str) -> 'JobComplaint':
+        """Add a complaint item to this job"""
+        if self.completed:
+            raise ValueError("Cannot modify a completed job")
+        next_order = len(self.complaints)
+        complaint = JobComplaint(job_id=self.job_id, description=description.strip(), sort_order=next_order)
+        db.session.add(complaint)
+        db.session.commit()
+        return complaint
+
+    def resolve_complaint(self, complaint_id: int) -> bool:
+        """Toggle resolved state on a complaint"""
+        complaint = db.session.get(JobComplaint, complaint_id)
+        if not complaint or complaint.job_id != self.job_id:
+            return False
+        complaint.is_resolved = not complaint.is_resolved
+        db.session.commit()
+        return True
+
+    def get_complaints(self) -> List[dict]:
+        """Return complaints as list of dicts"""
+        return [
+            {
+                'complaint_id': c.complaint_id,
+                'description': c.description,
+                'is_resolved': c.is_resolved,
+                'sort_order': c.sort_order,
+            }
+            for c in self.complaints
+        ]
+
     def mark_as_completed(self) -> bool:
         """Mark job as completed"""
         self.completed = True
@@ -268,6 +320,10 @@ class Job(db.Model, BaseModelMixin, TenantScopedMixin):
             data['first_name'] = self.customer_rel.first_name
             data['family_name'] = self.customer_rel.family_name
             data['customer_id'] = self.customer_rel.customer_id
+            data['email'] = self.customer_rel.email
+            data['phone'] = self.customer_rel.phone
+        if self.vehicle_rel:
+            data['vehicle'] = self.vehicle_rel.to_dict()
         return data
 
 
@@ -275,3 +331,4 @@ class Job(db.Model, BaseModelMixin, TenantScopedMixin):
 from app.models.customer import Customer
 from app.models.service import Service
 from app.models.part import Part
+from app.models.vehicle import Vehicle

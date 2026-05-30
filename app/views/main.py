@@ -165,6 +165,48 @@ def api_search_customers():
         return jsonify({'error': 'Search failed'}), 500
 
 
+@main_bp.route('/api/customers', methods=['POST'])
+@login_required
+@handle_database_errors
+def api_create_customer():
+    """API: Create customer and return JSON (used by stepper)"""
+    tenant_id = session.get('current_tenant_id') or getattr(g, 'current_tenant_id', None)
+    data = request.get_json(silent=True) or request.form
+
+    raw_phone = sanitize_input(data.get('phone', ''))
+    clean_phone = re.sub(r'\D', '', raw_phone)
+    customer_data = {
+        'first_name': sanitize_input(data.get('first_name', '')),
+        'family_name': sanitize_input(data.get('family_name', '')),
+        'email': sanitize_input(data.get('email', '')),
+        'phone': clean_phone,
+        'tenant_id': tenant_id,
+    }
+
+    try:
+        validation_result = validate_customer_data(customer_data)
+        if not validation_result.is_valid:
+            return jsonify({'error': '; '.join(validation_result.get_errors())}), 400
+
+        existing = _db.session.execute(
+            _db.select(Customer).where(
+                Customer.tenant_id == tenant_id,
+                Customer.email == customer_data['email'],
+            )
+        ).scalar_one_or_none()
+        if existing:
+            return jsonify({'error': f"Email {customer_data['email']} is already registered"}), 409
+
+        success, errors, customer = customer_service.create_customer(customer_data)
+        if success:
+            return jsonify({'customer_id': customer.customer_id, 'full_name': customer.full_name})
+        return jsonify({'error': '; '.join(errors)}), 400
+
+    except Exception as e:
+        logger.error(f"API create customer failed: {e}")
+        return jsonify({'error': 'System error, please try again'}), 500
+
+
 @main_bp.route('/api/customers/<int:customer_id>')
 @login_required
 @handle_database_errors

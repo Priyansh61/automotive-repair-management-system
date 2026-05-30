@@ -120,6 +120,8 @@ def init_extensions(app):
             Customer, Job, JobService, JobPart, Service, Part, User,
             Tenant, TenantMembership, Inventory, InventoryTransaction, Subscription
         )
+        from app.models.vehicle import Vehicle
+        from app.models.job import JobComplaint
 
         if app.config.get('ENV') != 'production':
             db.create_all()

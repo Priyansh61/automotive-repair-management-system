@@ -29,6 +29,7 @@ class Customer(db.Model, BaseModelMixin, TenantScopedMixin):
 
     # Relationships
     jobs: Mapped[List["Job"]] = relationship("Job", back_populates="customer_rel", lazy="dynamic")
+    vehicles: Mapped[List["Vehicle"]] = relationship("Vehicle", back_populates="customer", order_by="Vehicle.make")
     tenant: Mapped[Optional["Tenant"]] = relationship("Tenant", backref="customers")
 
     @property
@@ -139,5 +140,6 @@ class Customer(db.Model, BaseModelMixin, TenantScopedMixin):
         return data
 
 
-# Import Job here to avoid circular imports
+# Import to avoid circular imports
 from app.models.job import Job
+from app.models.vehicle import Vehicle

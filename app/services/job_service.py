@@ -53,21 +53,22 @@ class JobService:
             raise
 
     def get_job_details(self, job_id: int) -> Dict[str, Any]:
-        """
-        Get detailed job information
-
-        Args:
-            job_id: Job ID
-
-        Returns:
-            Job details dictionary
-        """
+        """Get detailed job information"""
         try:
-            job = self.get_job_by_id(job_id)
+            from sqlalchemy.orm import joinedload
+            job = db.session.execute(
+                db.select(Job)
+                .options(
+                    joinedload(Job.customer_rel),
+                    joinedload(Job.vehicle_rel),
+                    joinedload(Job.complaints),
+                )
+                .where(Job.job_id == job_id)
+            ).unique().scalar_one_or_none()
+
             if not job:
                 return {}
 
-            # Get all available services and parts
             all_services = Service.get_all_sorted()
             all_parts = Part.get_all_sorted()
 
@@ -75,6 +76,7 @@ class JobService:
                 'job_info': job.to_dict(),
                 'services': job.get_services(),
                 'parts': job.get_parts(),
+                'complaints': job.get_complaints(),
                 'all_services': [s.to_dict() for s in all_services],
                 'all_parts': [p.to_dict() for p in all_parts],
                 'job_completed': job.completed
@@ -253,17 +255,16 @@ class JobService:
                 'payment_rate': 0
             }
 
-    def create_job(self, customer_id: int, job_date: date, tenant_id: int = None) -> Tuple[bool, List[str], Optional[Job]]:
-        """
-        Create a new job
-
-        Args:
-            customer_id: Customer ID
-            job_date: Job date
-
-        Returns:
-            (success, error_messages, job)
-        """
+    def create_job(
+        self,
+        customer_id: int,
+        job_date: date,
+        tenant_id: int = None,
+        vehicle_id: int = None,
+        odometer_in: int = None,
+        complaints: List[str] = None,
+    ) -> Tuple[bool, List[str], Optional[Job]]:
+        """Create a new job with optional vehicle, odometer, and complaints"""
         try:
             if job_date < date.today():
                 return False, ["Job date cannot be earlier than today"], None
@@ -272,13 +273,26 @@ class JobService:
                 job_date=job_date,
                 customer=customer_id,
                 tenant_id=tenant_id or self._current_tenant_id(),
+                vehicle_id=vehicle_id,
+                odometer_in=odometer_in,
                 total_cost=0.0,
                 completed=False,
-                paid=False
+                paid=False,
             )
-            job.save()
+            db.session.add(job)
+            db.session.flush()  # get job_id before adding complaints
 
-            self.logger.info(f"Created job for customer {customer_id}")
+            for i, desc in enumerate(complaints or []):
+                if desc and desc.strip():
+                    from app.models.job import JobComplaint
+                    db.session.add(JobComplaint(
+                        job_id=job.job_id,
+                        description=desc.strip(),
+                        sort_order=i,
+                    ))
+
+            db.session.commit()
+            self.logger.info(f"Created job {job.job_id} for customer {customer_id}")
             return True, [], job
 
         except Exception as e:
