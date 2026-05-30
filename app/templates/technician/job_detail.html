@@ -1,313 +1,306 @@
 {% extends "base/layout.html" %}
+{% block title %}Job #{{ data.job_id }} — RepairOS{% endblock %}
 
-{% block title %}Job #{{ data.job_id }} Details - RepairOS{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/job-flow.css') }}">
+{% endblock %}
 
 {% block breadcrumb_items %}
-    <li class="breadcrumb-item">
-        <a href="{{ url_for('main.dashboard') }}">Dashboard</a>
-    </li>
-    <li class="breadcrumb-item">
-        <a href="{{ url_for('technician.current_jobs') }}">Current Jobs</a>
-    </li>
-    <li class="breadcrumb-item active">Job #{{ data.job_id }}</li>
+  <li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}">Dashboard</a></li>
+  <li class="breadcrumb-item"><a href="{{ url_for('technician.current_jobs') }}">Jobs</a></li>
+  <li class="breadcrumb-item active">Job #{{ data.job_id }}</li>
 {% endblock %}
 
 {% block content %}
-<!-- Page Header -->
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="jf-page">
+
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-3 jf-animate d1">
     <div>
-        <h1 class="h3 fw-bold text-gray-900 mb-2 d-flex align-items-center gap-2">
-            <i class="ti ti-file-text text-primary"></i>
-            Job #{{ data.job_id }} Details
-        </h1>
-        <p class="text-muted mb-0">View job information, services, and parts</p>
+      <h1 class="h4 fw-bold mb-0" style="color:#1e293b;">
+        Job <span style="color:var(--jf-blue);">#{{ data.job_id }}</span>
+      </h1>
+      <p class="text-muted small mb-0">
+        {{ data.first_name }} {{ data.family_name }}
+        {% if data.job_date is string %} · {{ data.job_date }}
+        {% elif data.job_date %} · {{ data.job_date.strftime('%d %b %Y') }}{% endif %}
+      </p>
     </div>
     <div class="d-flex gap-2">
-        {% if not data.completed %}
-        <a href="{{ url_for('technician.modify_job', job_id=data.job_id) }}" class="btn btn-accent">
-            <i class="ti ti-pencil me-2"></i>Edit Job
-        </a>
-        <form action="{{ url_for('technician.complete_job', job_id=data.job_id) }}" method="POST" class="d-inline">
-            <button type="submit" class="btn btn-success" onclick="return confirm('Are you sure you want to mark this job as completed? This action cannot be undone.')">
-                <i class="ti ti-circle-check me-2"></i>Mark Complete
-            </button>
-        </form>
-        {% endif %}
-        <a href="{{ url_for('technician.current_jobs') }}" class="btn btn-outline-secondary">
-            <i class="ti ti-arrow-left me-2"></i>Back to Jobs
-        </a>
+      {% if not data.completed %}
+      <a href="{{ url_for('technician.modify_job', job_id=data.job_id) }}" class="jf-btn primary">
+        <i class="ti ti-pencil"></i> Edit Job
+      </a>
+      <form action="{{ url_for('technician.complete_job', job_id=data.job_id) }}" method="POST" class="d-inline">
+        <button type="submit" class="jf-btn accent"
+          onclick="return confirm('Mark this job as completed?')">
+          <i class="ti ti-circle-check"></i> Complete
+        </button>
+      </form>
+      {% endif %}
+      <a href="{{ url_for('technician.current_jobs') }}" class="jf-btn ghost">
+        <i class="ti ti-arrow-left"></i> Back
+      </a>
     </div>
-</div>
+  </div>
 
-<!-- Status Banner -->
-<div class="row mb-4">
-    <div class="col-12">
-        {% if data.completed and data.paid %}
-        <div class="alert alert-success d-flex align-items-center gap-2 mb-0" role="alert">
-            <i class="ti ti-circle-check"></i>
-            <strong>Completed and Paid</strong> -- This job has been completed and payment has been received.
+  <!-- Status banner -->
+  {% if data.completed and data.paid %}
+  <div class="alert alert-success d-flex gap-2 align-items-center mb-3 jf-animate d1">
+    <i class="ti ti-circle-check fs-5"></i>
+    <strong>Completed & Paid</strong> — All done.
+  </div>
+  {% elif data.completed %}
+  <div class="alert alert-info d-flex gap-2 align-items-center mb-3 jf-animate d1">
+    <i class="ti ti-circle-check fs-5"></i>
+    <strong>Completed</strong> — Awaiting payment.
+  </div>
+  {% else %}
+  <div class="alert alert-warning d-flex gap-2 align-items-center mb-3 jf-animate d1">
+    <i class="ti ti-clock fs-5"></i>
+    <strong>In Progress</strong>
+  </div>
+  {% endif %}
+
+  <div class="row g-3">
+
+    <!-- ── LEFT COLUMN ──────────────────────────────── -->
+    <div class="col-lg-4">
+
+      <!-- Customer -->
+      <div class="jf-card mb-3 jf-animate d1">
+        <div class="jf-card-header blue">
+          <div class="header-icon"><i class="ti ti-user"></i></div>
+          Customer
         </div>
-        {% elif data.completed %}
-        <div class="alert alert-info d-flex align-items-center gap-2 mb-0" role="alert">
-            <i class="ti ti-circle-check"></i>
-            <strong>Completed</strong> -- This job has been marked as completed. Awaiting payment.
+        <div class="jf-card-body">
+          <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="jf-avatar" style="width:44px;height:44px;font-size:.9375rem;">
+              {{ (data.first_name or '')[0] | upper }}{{ data.family_name[0] | upper }}
+            </div>
+            <div>
+              <div class="fw-bold" style="font-size:1.0625rem;color:#1e293b;">{{ data.first_name }} {{ data.family_name }}</div>
+              <div class="text-muted small">ID #{{ data.customer_id }}</div>
+            </div>
+          </div>
+          {% if data.email %}
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <i class="ti ti-mail text-muted"></i>
+            <span style="font-size:.875rem;">{{ data.email }}</span>
+          </div>
+          {% endif %}
+          {% if data.phone %}
+          <div class="d-flex align-items-center gap-2 mb-3">
+            <i class="ti ti-phone text-muted"></i>
+            <span style="font-size:.875rem;">{{ data.phone }}</span>
+          </div>
+          {% endif %}
+          <div class="d-flex flex-wrap gap-2">
+            {% if data.completed %}
+              <span class="jf-badge green"><i class="ti ti-circle-check"></i> Completed</span>
+            {% else %}
+              <span class="jf-badge orange"><i class="ti ti-clock"></i> In Progress</span>
+            {% endif %}
+            {% if data.paid %}
+              <span class="jf-badge green"><i class="ti ti-credit-card"></i> Paid</span>
+            {% else %}
+              <span class="jf-badge red"><i class="ti ti-alert-triangle"></i> Unpaid</span>
+            {% endif %}
+          </div>
         </div>
+      </div>
+
+      <!-- Vehicle -->
+      {% if data.vehicle %}
+      {% set v = data.vehicle %}
+      <div class="jf-card mb-3 jf-animate d2" style="overflow:hidden;">
+        <div class="jf-vehicle-hero">
+          <div class="jf-vehicle-hero-icon"><i class="ti ti-car"></i></div>
+          <div>
+            <div class="jf-vehicle-hero-name">{{ v.make }} {{ v.model }}{% if v.year %} ({{ v.year }}){% endif %}</div>
+            <div class="jf-vehicle-hero-plate">{{ v.license_plate }}</div>
+          </div>
+        </div>
+        <div class="jf-card-body" style="padding:.875rem 1.25rem;">
+          <div class="d-flex flex-wrap gap-2 mb-2">
+            {% if v.fuel_type %}<span class="jf-badge blue"><i class="ti ti-flame"></i> {{ v.fuel_type }}</span>{% endif %}
+            {% if v.color   %}<span class="jf-badge gray"><i class="ti ti-palette"></i> {{ v.color }}</span>{% endif %}
+          </div>
+          {% if data.odometer_in %}
+          <div class="jf-info-row mt-2">
+            <div class="jf-info-label">Odometer In</div>
+            <div class="jf-info-value"><i class="ti ti-gauge"></i> {{ data.odometer_in | int }} km</div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Reported problems (read-only) -->
+      {% if complaints %}
+      <div class="jf-card mb-3 jf-animate d3">
+        <div class="jf-card-header orange">
+          <div class="header-icon"><i class="ti ti-alert-circle"></i></div>
+          Reported Problems
+          {% set done = complaints | selectattr('is_resolved') | list | length %}
+          <span class="ms-auto" style="font-size:.8125rem;font-weight:500;opacity:.85;">
+            {{ done }}/{{ complaints|length }}
+          </span>
+        </div>
+        <div class="jf-card-body" style="padding:.5rem 0;">
+          {% for c in complaints %}
+          <div class="d-flex align-items-center gap-3 px-3 py-2"
+               style="border-bottom:1px solid var(--jf-border);">
+            {% if c.is_resolved %}
+              <i class="ti ti-circle-check" style="color:var(--jf-green);flex-shrink:0;"></i>
+              <span style="flex:1;text-decoration:line-through;color:#94a3b8;font-size:.875rem;">{{ c.description }}</span>
+              <span class="jf-badge green" style="font-size:.7rem;"><i class="ti ti-check"></i></span>
+            {% else %}
+              <i class="ti ti-circle-dashed" style="color:#f59e0b;flex-shrink:0;"></i>
+              <span style="flex:1;font-size:.875rem;color:#1e293b;">{{ c.description }}</span>
+              <span class="jf-badge orange" style="font-size:.7rem;">Open</span>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Technician notes -->
+      {% if data.technician_notes %}
+      <div class="jf-card jf-animate d4">
+        <div class="jf-card-header slate">
+          <div class="header-icon"><i class="ti ti-notes"></i></div>
+          Technician Notes
+        </div>
+        <div class="jf-card-body">
+          <p class="mb-0" style="white-space:pre-line;font-size:.9rem;color:#475569;">{{ data.technician_notes }}</p>
+        </div>
+      </div>
+      {% endif %}
+
+    </div>
+
+    <!-- ── RIGHT COLUMN ─────────────────────────────── -->
+    <div class="col-lg-8">
+
+      <!-- Services table -->
+      <div class="jf-card mb-3 jf-animate d2">
+        <div class="jf-card-header teal">
+          <div class="header-icon"><i class="ti ti-tool"></i></div>
+          Services
+        </div>
+        {% if services %}
+        <table class="jf-line-table">
+          <thead>
+            <tr>
+              <th>Service</th>
+              <th style="text-align:center;">Qty</th>
+              <th style="text-align:right;">Unit Cost</th>
+              <th style="text-align:right;">Subtotal</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% set st = namespace(v=0) %}
+            {% for s in services %}
+            {% set lt = s.cost|float * s.qty|int %}
+            {% set st.v = st.v + lt %}
+            <tr>
+              <td><span style="font-weight:600;">{{ s.service_name }}</span></td>
+              <td style="text-align:center;">{{ s.qty }}</td>
+              <td style="text-align:right;">{{ currency_symbol }}{{ "%.2f"|format(s.cost|float) }}</td>
+              <td style="text-align:right;font-weight:600;">{{ currency_symbol }}{{ "%.2f"|format(lt) }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="3" style="text-align:right;padding:.75rem;">Services Total</td>
+              <td style="text-align:right;padding:.75rem;font-weight:700;color:var(--jf-blue);">
+                {{ currency_symbol }}{{ "%.2f"|format(st.v) }}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
         {% else %}
-        <div class="alert alert-warning d-flex align-items-center gap-2 mb-0" role="alert">
-            <i class="ti ti-clock"></i>
-            <strong>In Progress</strong> -- This job is currently active.
+        <div style="padding:2rem;text-align:center;color:#94a3b8;">
+          <i class="ti ti-tool" style="font-size:2rem;opacity:.3;display:block;margin-bottom:.5rem;"></i>
+          No services on this job
         </div>
         {% endif %}
-    </div>
-</div>
+      </div>
 
-<div class="row">
-    <!-- Left column: Customer + Vehicle + Complaints -->
-    <div class="col-lg-4 mb-4">
-
-        <!-- Customer Information -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <h3 class="card-title"><i class="ti ti-user me-2"></i>Customer</h3>
-            </div>
-            <div class="card-body">
-                <div class="d-flex align-items-center mb-3">
-                    <div class="rounded-circle bg-primary bg-opacity-10 p-3 me-3 d-flex align-items-center justify-content-center">
-                        <i class="ti ti-user text-primary"></i>
-                    </div>
-                    <div>
-                        <div class="fw-bold fs-5">{{ data.first_name }} {{ data.family_name }}</div>
-                        <small class="text-muted">ID #{{ data.customer_id }}</small>
-                    </div>
-                </div>
-                {% if data.email %}
-                <div class="d-flex align-items-center mb-2">
-                    <i class="ti ti-mail text-muted me-3"></i>
-                    <span class="fw-medium">{{ data.email }}</span>
-                </div>
-                {% endif %}
-                {% if data.phone %}
-                <div class="d-flex align-items-center mb-2">
-                    <i class="ti ti-phone text-muted me-3"></i>
-                    <span class="fw-medium">{{ data.phone }}</span>
-                </div>
-                {% endif %}
-                <hr class="my-2">
-                <div class="d-flex align-items-center mb-2">
-                    <i class="ti ti-calendar text-muted me-3"></i>
-                    <div>
-                        <small class="text-muted d-block">Job Date</small>
-                        <span class="fw-medium">{{ data.job_date.strftime('%b %d, %Y') if data.job_date else 'N/A' }}</span>
-                    </div>
-                </div>
-                {% if data.odometer_in %}
-                <div class="d-flex align-items-center mb-2">
-                    <i class="ti ti-gauge text-muted me-3"></i>
-                    <div>
-                        <small class="text-muted d-block">Odometer In</small>
-                        <span class="fw-medium">{{ data.odometer_in | int }} km</span>
-                    </div>
-                </div>
-                {% endif %}
-                <div class="d-flex gap-2 mt-2">
-                    {% if data.completed %}<span class="badge bg-success"><i class="ti ti-circle-check me-1"></i>Completed</span>
-                    {% else %}<span class="badge bg-warning text-dark"><i class="ti ti-clock me-1"></i>In Progress</span>{% endif %}
-                    {% if data.paid %}<span class="badge bg-success"><i class="ti ti-credit-card me-1"></i>Paid</span>
-                    {% else %}<span class="badge bg-danger"><i class="ti ti-alert-triangle me-1"></i>Unpaid</span>{% endif %}
-                </div>
-            </div>
+      <!-- Parts table -->
+      <div class="jf-card mb-3 jf-animate d3">
+        <div class="jf-card-header" style="background:linear-gradient(135deg,#065f46 0%,#059669 100%);color:#fff;border-bottom-color:rgba(255,255,255,.12);">
+          <div class="header-icon"><i class="ti ti-package"></i></div>
+          Parts
         </div>
-
-        <!-- Vehicle -->
-        {% if data.vehicle %}
-        {% set v = data.vehicle %}
-        <div class="card mb-4">
-            <div class="card-header" style="background:#1e3a5f;color:#fff;">
-                <h3 class="card-title"><i class="ti ti-car me-2"></i>Vehicle</h3>
-            </div>
-            <div class="card-body">
-                <div class="fw-bold fs-5">{{ v.make }} {{ v.model }}{% if v.year %} ({{ v.year }}){% endif %}</div>
-                <div class="text-muted mb-2">{{ v.license_plate }}</div>
-                <div class="d-flex flex-wrap gap-2">
-                    {% if v.fuel_type %}<span class="badge bg-secondary">{{ v.fuel_type }}</span>{% endif %}
-                    {% if v.color %}<span class="badge bg-light text-dark border">{{ v.color }}</span>{% endif %}
-                </div>
-            </div>
+        {% if parts %}
+        <table class="jf-line-table">
+          <thead>
+            <tr>
+              <th>Part</th>
+              <th style="text-align:center;">Qty</th>
+              <th style="text-align:right;">Unit Cost</th>
+              <th style="text-align:right;">Subtotal</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% set pt = namespace(v=0) %}
+            {% for p in parts %}
+            {% set lt = p.cost|float * p.qty|int %}
+            {% set pt.v = pt.v + lt %}
+            <tr>
+              <td><span style="font-weight:600;">{{ p.part_name }}</span></td>
+              <td style="text-align:center;">{{ p.qty }}</td>
+              <td style="text-align:right;">{{ currency_symbol }}{{ "%.2f"|format(p.cost|float) }}</td>
+              <td style="text-align:right;font-weight:600;">{{ currency_symbol }}{{ "%.2f"|format(lt) }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="3" style="text-align:right;padding:.75rem;">Parts Total</td>
+              <td style="text-align:right;padding:.75rem;font-weight:700;color:var(--jf-blue);">
+                {{ currency_symbol }}{{ "%.2f"|format(pt.v) }}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+        {% else %}
+        <div style="padding:2rem;text-align:center;color:#94a3b8;">
+          <i class="ti ti-package" style="font-size:2rem;opacity:.3;display:block;margin-bottom:.5rem;"></i>
+          No parts on this job
         </div>
         {% endif %}
+      </div>
 
-        <!-- Reported Problems -->
-        {% if complaints %}
-        <div class="card">
-            <div class="card-header" style="background:#e85d04;color:#fff;">
-                <h3 class="card-title"><i class="ti ti-alert-circle me-2"></i>Reported Problems</h3>
+      <!-- Grand total -->
+      <div class="jf-animate d4">
+        <div class="jf-cost-box">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div class="jf-cost-label">Grand Total</div>
+              <div class="jf-cost-amount">{{ currency_symbol }}{{ "%.2f"|format(data.total_cost|float) }}</div>
+              <div class="jf-cost-sub">Services + Parts combined</div>
             </div>
-            <div class="card-body p-0">
-                <ul class="list-group list-group-flush">
-                    {% for c in complaints %}
-                    <li class="list-group-item d-flex align-items-center gap-3">
-                        {% if c.is_resolved %}
-                            <i class="ti ti-circle-check text-success flex-shrink-0"></i>
-                            <span class="text-decoration-line-through text-muted flex-grow-1">{{ c.description }}</span>
-                            <span class="badge bg-success">Done</span>
-                        {% else %}
-                            <i class="ti ti-circle text-warning flex-shrink-0"></i>
-                            <span class="flex-grow-1">{{ c.description }}</span>
-                            <span class="badge bg-warning text-dark">Open</span>
-                        {% endif %}
-                    </li>
-                    {% endfor %}
-                </ul>
+            <div>
+              {% if data.paid %}
+              <span class="jf-badge green" style="font-size:.875rem;padding:.4rem .875rem;">
+                <i class="ti ti-circle-check"></i> Paid
+              </span>
+              {% else %}
+              <span class="jf-badge" style="background:rgba(255,255,255,.15);color:#fff;font-size:.875rem;padding:.4rem .875rem;">
+                <i class="ti ti-clock"></i> Unpaid
+              </span>
+              {% endif %}
             </div>
+          </div>
         </div>
-        {% endif %}
-
-        {% if data.technician_notes %}
-        <div class="card mt-4">
-            <div class="card-header bg-secondary text-white">
-                <h3 class="card-title"><i class="ti ti-notes me-2"></i>Technician Notes</h3>
-            </div>
-            <div class="card-body">
-                <p class="mb-0 text-muted" style="white-space:pre-line;">{{ data.technician_notes }}</p>
-            </div>
-        </div>
-        {% endif %}
+      </div>
 
     </div>
-
-    <!-- Services & Parts -->
-    <div class="col-lg-8 mb-4">
-        <!-- Services Table -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <h3 class="card-title">
-                    <i class="ti ti-tool me-2"></i>
-                    Services
-                </h3>
-            </div>
-
-            {% if services %}
-            <div class="table-responsive">
-                <table class="table table-vcenter card-table">
-                    <thead>
-                        <tr>
-                            <th>Service</th>
-                            <th>Quantity</th>
-                            <th class="text-end">Unit Cost</th>
-                            <th class="text-end">Subtotal</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% set services_total = namespace(value=0) %}
-                        {% for service in services %}
-                        {% set line_total = (service.cost|float) * (service.qty|int) %}
-                        {% set services_total.value = services_total.value + line_total %}
-                        <tr>
-                            <td>
-                                <div class="fw-semibold">{{ service.service_name }}</div>
-                            </td>
-                            <td>{{ service.qty }}</td>
-                            <td class="text-end">{{ currency_symbol }}{{ "%.2f"|format(service.cost|float) }}</td>
-                            <td class="text-end fw-semibold">{{ currency_symbol }}{{ "%.2f"|format(line_total) }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                    <tfoot>
-                        <tr>
-                            <td colspan="3" class="text-end fw-bold">Services Total:</td>
-                            <td class="text-end fw-bold text-success">{{ currency_symbol }}{{ "%.2f"|format(services_total.value) }}</td>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
-            {% else %}
-            <div class="empty">
-                <div class="empty-icon"><i class="ti ti-tool"></i></div>
-                <p class="empty-title">No Services</p>
-                <p class="empty-subtitle text-secondary">No services have been added to this job.</p>
-            </div>
-            {% endif %}
-        </div>
-
-        <!-- Parts Table -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <h3 class="card-title">
-                    <i class="ti ti-package me-2"></i>
-                    Parts
-                </h3>
-            </div>
-
-            {% if parts %}
-            <div class="table-responsive">
-                <table class="table table-vcenter card-table">
-                    <thead>
-                        <tr>
-                            <th>Part</th>
-                            <th>Quantity</th>
-                            <th class="text-end">Unit Cost</th>
-                            <th class="text-end">Subtotal</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% set parts_total = namespace(value=0) %}
-                        {% for part in parts %}
-                        {% set line_total = (part.cost|float) * (part.qty|int) %}
-                        {% set parts_total.value = parts_total.value + line_total %}
-                        <tr>
-                            <td>
-                                <div class="fw-semibold">{{ part.part_name }}</div>
-                            </td>
-                            <td>{{ part.qty }}</td>
-                            <td class="text-end">{{ currency_symbol }}{{ "%.2f"|format(part.cost|float) }}</td>
-                            <td class="text-end fw-semibold">{{ currency_symbol }}{{ "%.2f"|format(line_total) }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                    <tfoot>
-                        <tr>
-                            <td colspan="3" class="text-end fw-bold">Parts Total:</td>
-                            <td class="text-end fw-bold text-success">{{ currency_symbol }}{{ "%.2f"|format(parts_total.value) }}</td>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
-            {% else %}
-            <div class="empty">
-                <div class="empty-icon"><i class="ti ti-package"></i></div>
-                <p class="empty-title">No Parts</p>
-                <p class="empty-subtitle text-secondary">No parts have been added to this job.</p>
-            </div>
-            {% endif %}
-        </div>
-
-        <!-- Total Cost Summary -->
-        <div class="card">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h4 class="fw-bold mb-1">Total Cost</h4>
-                        <p class="text-muted mb-0">Combined services and parts</p>
-                    </div>
-                    <div class="text-end">
-                        <span class="fs-2 fw-bold text-success">{{ currency_symbol }}{{ "%.2f"|format(data.total_cost|float) }}</span>
-                        <div class="mt-1">
-                            {% if data.paid %}
-                                <span class="badge bg-success">
-                                    <i class="ti ti-circle-check me-1"></i>
-                                    Paid
-                                </span>
-                            {% else %}
-                                <span class="badge bg-warning">
-                                    <i class="ti ti-clock me-1"></i>
-                                    Unpaid
-                                </span>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+  </div>
 </div>
 {% endblock %}

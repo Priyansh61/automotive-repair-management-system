@@ -1,533 +1,590 @@
 {% extends "base/layout.html" %}
-{% block title %}New Job - RepairOS{% endblock %}
+{% block title %}New Job — RepairOS{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/job-flow.css') }}">
+{% endblock %}
 
 {% block breadcrumb_items %}
-    <li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}">Dashboard</a></li>
-    <li class="breadcrumb-item"><a href="{{ url_for('technician.current_jobs') }}">Current Jobs</a></li>
-    <li class="breadcrumb-item active">New Job</li>
+  <li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}">Dashboard</a></li>
+  <li class="breadcrumb-item"><a href="{{ url_for('technician.current_jobs') }}">Jobs</a></li>
+  <li class="breadcrumb-item active">New Job</li>
 {% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="jf-page">
+
+  <!-- Page title -->
+  <div class="d-flex justify-content-between align-items-center mb-3 jf-animate d1">
     <div>
-        <h1 class="h3 fw-bold mb-1 d-flex align-items-center gap-2">
-            <i class="ti ti-circle-plus text-primary"></i> Create New Job
-        </h1>
-        <p class="text-muted mb-0">Fill in customer, vehicle, and job details</p>
+      <h1 class="h4 fw-bold mb-0" style="color:#1e293b;">Create New Job</h1>
+      <p class="text-muted small mb-0">Walk through 3 steps — customer, vehicle, job details</p>
     </div>
-    <a href="{{ url_for('technician.current_jobs') }}" class="btn btn-outline-secondary">
-        <i class="ti ti-arrow-left me-2"></i>Back to Jobs
+    <a href="{{ url_for('technician.current_jobs') }}" class="jf-btn ghost">
+      <i class="ti ti-arrow-left"></i> Back
     </a>
-</div>
+  </div>
 
-<!-- Stepper indicator -->
-<div class="d-flex align-items-center gap-3 mb-4" id="stepIndicator">
-    <div class="step-indicator active" data-step="1">
-        <span class="step-num">1</span>
-        <span class="step-label">Customer</span>
+  <!-- Stepper indicator -->
+  <div class="jf-stepper jf-animate d2" id="stepperNav">
+    <div class="jf-step active" data-step="1">
+      <div class="jf-step-circle" id="sc1">1</div>
+      <div class="jf-step-label">
+        <span class="step-title">Customer</span>
+        <span class="step-sub">Who's bringing the car?</span>
+      </div>
     </div>
-    <div class="step-divider"></div>
-    <div class="step-indicator" data-step="2">
-        <span class="step-num">2</span>
-        <span class="step-label">Vehicle</span>
+    <div class="jf-step" data-step="2">
+      <div class="jf-step-circle" id="sc2">2</div>
+      <div class="jf-step-label">
+        <span class="step-title">Vehicle</span>
+        <span class="step-sub">Which car?</span>
+      </div>
     </div>
-    <div class="step-divider"></div>
-    <div class="step-indicator" data-step="3">
-        <span class="step-num">3</span>
-        <span class="step-label">Job Details</span>
+    <div class="jf-step" data-step="3">
+      <div class="jf-step-circle" id="sc3">3</div>
+      <div class="jf-step-label">
+        <span class="step-title">Job Details</span>
+        <span class="step-sub">Date, odometer, issues</span>
+      </div>
     </div>
-</div>
+  </div>
 
-<form method="POST" action="{{ url_for('technician.create_job') }}" id="newJobForm" data-no-loading-state="true">
+  <form method="POST" action="{{ url_for('technician.create_job') }}" id="newJobForm" data-no-loading-state="true">
 
-<!-- ── STEP 1: Customer ────────────────────────────────────── -->
-<div class="step-panel" id="step1">
-    <div class="card">
-        <div class="card-header"><h5 class="card-title mb-0"><i class="ti ti-user me-2"></i>Customer</h5></div>
-        <div class="card-body">
+  <!-- ════════════════════════════════════════════════
+       STEP 1 — CUSTOMER
+  ════════════════════════════════════════════════ -->
+  <div class="jf-step-panel active jf-animate d3" id="step1">
+    <div class="jf-card">
+      <div class="jf-card-header blue">
+        <div class="header-icon"><i class="ti ti-user"></i></div>
+        Customer
+      </div>
+      <div class="jf-card-body">
 
-            <!-- Search existing -->
-            <div class="mb-3">
-                <label class="form-label fw-semibold">Search existing customer</label>
-                <div class="input-group">
-                    <span class="input-group-text"><i class="ti ti-search"></i></span>
-                    <input type="text" class="form-control" id="customerSearch" placeholder="Type name to search…" autocomplete="off">
+        <!-- Selected customer display -->
+        <div class="jf-selected-card" id="selectedCustomerCard">
+          <div class="jf-avatar green"><i class="ti ti-user-check" style="font-size:.875rem;"></i></div>
+          <div class="flex-grow-1">
+            <div class="fw-semibold" id="selectedCustomerName" style="font-size:.9375rem;color:#1e293b;"></div>
+            <div class="small text-muted" id="selectedCustomerMeta"></div>
+          </div>
+          <button type="button" class="jf-btn ghost" id="clearCustomer" style="padding:.375rem .75rem;font-size:.8125rem;">Change</button>
+        </div>
+
+        <!-- Search box -->
+        <div id="searchSection">
+          <label class="jf-label">Search existing customer</label>
+          <div class="jf-search-wrap">
+            <i class="ti ti-search jf-search-icon"></i>
+            <input type="text" class="jf-search-input" id="customerSearch" placeholder="Type name or phone…" autocomplete="off">
+            <div class="jf-search-results" id="customerResults"></div>
+          </div>
+        </div>
+
+        <div class="jf-or-divider"><span>or</span></div>
+
+        <!-- Add new customer -->
+        <div>
+          <button type="button" class="jf-toggle-btn" id="toggleNewCustomer">
+            <i class="ti ti-plus"></i> Add New Customer
+          </button>
+
+          <div class="jf-expand-panel" id="newCustomerPanel">
+            <div class="jf-sub-panel">
+              <div class="jf-sub-panel-title"><i class="ti ti-user-plus"></i> New Customer</div>
+              <div class="row g-3">
+                <div class="col-sm-6">
+                  <label class="jf-label">First Name</label>
+                  <input type="text" class="jf-input" name="new_first_name" id="new_first_name" placeholder="Rahul">
                 </div>
-                <div id="customerResults" class="list-group mt-1 shadow-sm" style="display:none;position:absolute;z-index:1000;min-width:320px;"></div>
-            </div>
-
-            <!-- Selected customer display -->
-            <div id="selectedCustomerCard" class="alert alert-success d-flex justify-content-between align-items-center" style="display:none!important;">
-                <div>
-                    <i class="ti ti-user-check me-2"></i>
-                    <span id="selectedCustomerName" class="fw-semibold"></span>
-                    <small id="selectedCustomerMeta" class="text-muted ms-2"></small>
+                <div class="col-sm-6">
+                  <label class="jf-label">Family Name <span class="req">*</span></label>
+                  <input type="text" class="jf-input" name="new_family_name" id="new_family_name" placeholder="Sharma">
                 </div>
-                <button type="button" class="btn btn-sm btn-outline-secondary" id="clearCustomer">Change</button>
-            </div>
-            <input type="hidden" name="customer_id" id="customer_id">
-
-            <!-- Divider -->
-            <div class="d-flex align-items-center my-3 text-muted">
-                <hr class="flex-grow-1"><span class="mx-2 small">or</span><hr class="flex-grow-1">
-            </div>
-
-            <!-- Add new customer toggle -->
-            <div>
-                <button type="button" class="btn btn-outline-primary btn-sm" id="toggleNewCustomer">
-                    <i class="ti ti-plus me-1"></i>Add New Customer
+                <div class="col-sm-6">
+                  <label class="jf-label">Email <span class="req">*</span></label>
+                  <input type="email" class="jf-input" name="new_email" id="new_email" placeholder="rahul@example.com">
+                </div>
+                <div class="col-sm-6">
+                  <label class="jf-label">Phone <span class="req">*</span></label>
+                  <input type="tel" class="jf-input" name="new_phone" id="new_phone" placeholder="9876543210" maxlength="10">
+                </div>
+              </div>
+              <div class="mt-3">
+                <button type="button" class="jf-btn primary" id="saveNewCustomer">
+                  <i class="ti ti-circle-check"></i> Save & Continue
                 </button>
+                <div class="text-danger small mt-2" id="newCustomerError" style="display:none;"></div>
+              </div>
             </div>
-
-            <div id="newCustomerForm" style="display:none;" class="mt-3 p-3 border rounded bg-light">
-                <h6 class="fw-semibold mb-3"><i class="ti ti-user-plus me-1"></i>New Customer Details</h6>
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label">First Name</label>
-                        <input type="text" class="form-control" name="new_first_name" id="new_first_name" placeholder="Rahul">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Family Name <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="new_family_name" id="new_family_name" placeholder="Sharma">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Email <span class="text-danger">*</span></label>
-                        <input type="email" class="form-control" name="new_email" id="new_email" placeholder="rahul@example.com">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Phone <span class="text-danger">*</span></label>
-                        <input type="tel" class="form-control" name="new_phone" id="new_phone" placeholder="9876543210" maxlength="10">
-                    </div>
-                </div>
-                <div class="mt-3">
-                    <button type="button" class="btn btn-primary btn-sm" id="saveNewCustomer">
-                        <i class="ti ti-check me-1"></i>Save Customer & Continue
-                    </button>
-                </div>
-            </div>
+          </div>
         </div>
+
+        <input type="hidden" name="customer_id" id="customer_id">
+      </div>
     </div>
 
-    <div class="d-flex justify-content-end mt-3">
-        <button type="button" class="btn btn-primary" id="step1Next" disabled>
-            Next: Vehicle <i class="ti ti-arrow-right ms-1"></i>
-        </button>
+    <div class="jf-step-nav">
+      <div></div>
+      <button type="button" class="jf-btn primary lg" id="step1Next" disabled>
+        Vehicle <i class="ti ti-arrow-right"></i>
+      </button>
     </div>
-</div>
+  </div>
 
-<!-- ── STEP 2: Vehicle ─────────────────────────────────────── -->
-<div class="step-panel" id="step2" style="display:none;">
-    <div class="card">
-        <div class="card-header"><h5 class="card-title mb-0"><i class="ti ti-car me-2"></i>Vehicle</h5></div>
-        <div class="card-body">
+  <!-- ════════════════════════════════════════════════
+       STEP 2 — VEHICLE
+  ════════════════════════════════════════════════ -->
+  <div class="jf-step-panel" id="step2">
+    <div class="jf-card">
+      <div class="jf-card-header blue">
+        <div class="header-icon"><i class="ti ti-car"></i></div>
+        Vehicle
+        <span class="ms-auto small fw-normal opacity-75" id="vehicleCustomerName"></span>
+      </div>
+      <div class="jf-card-body">
 
-            <!-- Existing vehicles -->
-            <div id="existingVehiclesSection">
-                <label class="form-label fw-semibold">Select vehicle</label>
-                <div id="vehicleList" class="mb-3"></div>
-                <input type="hidden" name="vehicle_id" id="vehicle_id">
-            </div>
-
-            <!-- Divider -->
-            <div class="d-flex align-items-center my-3 text-muted">
-                <hr class="flex-grow-1"><span class="mx-2 small">or</span><hr class="flex-grow-1">
-            </div>
-
-            <button type="button" class="btn btn-outline-primary btn-sm" id="toggleNewVehicle">
-                <i class="ti ti-plus me-1"></i>Add New Vehicle
-            </button>
-
-            <div id="newVehicleForm" class="mt-3 p-3 border rounded bg-light" style="display:none;">
-                <h6 class="fw-semibold mb-3"><i class="ti ti-car me-1"></i>New Vehicle Details</h6>
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label">Make <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="vehicle_make" placeholder="Maruti, Toyota…">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Model <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="vehicle_model" placeholder="Swift, Innova…">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Year</label>
-                        <input type="number" class="form-control" name="vehicle_year" min="1990" max="2100" placeholder="2022">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">License Plate <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control text-uppercase" name="license_plate" placeholder="MH02AB1234" id="licensePlateInput">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Fuel Type</label>
-                        <select class="form-select" name="fuel_type">
-                            <option value="">Select…</option>
-                            {% for ft in fuel_types %}
-                            <option value="{{ ft }}">{{ ft }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Color</label>
-                        <input type="text" class="form-control" name="color" placeholder="White, Silver…">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">VIN</label>
-                        <input type="text" class="form-control" name="vin" placeholder="Optional" maxlength="17">
-                    </div>
-                </div>
-                <div id="plateError" class="text-danger small mt-2" style="display:none;"></div>
-            </div>
+        <div id="existingVehiclesWrap">
+          <label class="jf-label mb-2">Select an existing vehicle</label>
+          <div class="jf-vehicle-grid" id="vehicleGrid"></div>
+          <input type="hidden" name="vehicle_id" id="vehicle_id">
         </div>
-    </div>
 
-    <div class="d-flex justify-content-between mt-3">
-        <button type="button" class="btn btn-outline-secondary" id="step2Back">
-            <i class="ti ti-arrow-left me-1"></i>Back
-        </button>
-        <button type="button" class="btn btn-primary" id="step2Next">
-            Next: Job Details <i class="ti ti-arrow-right ms-1"></i>
-        </button>
-    </div>
-</div>
+        <div class="jf-or-divider"><span>or</span></div>
 
-<!-- ── STEP 3: Job Details ─────────────────────────────────── -->
-<div class="step-panel" id="step3" style="display:none;">
-    <div class="card">
-        <div class="card-header"><h5 class="card-title mb-0"><i class="ti ti-file-description me-2"></i>Job Details</h5></div>
-        <div class="card-body">
+        <button type="button" class="jf-toggle-btn" id="toggleNewVehicle">
+          <i class="ti ti-plus"></i> Add New Vehicle
+        </button>
+
+        <div class="jf-expand-panel" id="newVehiclePanel">
+          <div class="jf-sub-panel">
+            <div class="jf-sub-panel-title"><i class="ti ti-car"></i> New Vehicle</div>
             <div class="row g-3">
-                <div class="col-md-6">
-                    <label class="form-label fw-semibold"><i class="ti ti-calendar me-1"></i>Job Date <span class="text-danger">*</span></label>
-                    <input type="date" class="form-control" name="job_date" id="job_date" min="{{ min_date }}" required>
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label fw-semibold"><i class="ti ti-gauge me-1"></i>Odometer In (km)</label>
-                    <input type="number" class="form-control" name="odometer_in" min="0" placeholder="e.g. 45000">
-                </div>
+              <div class="col-sm-6">
+                <label class="jf-label">Make <span class="req">*</span></label>
+                <input type="text" class="jf-input" name="vehicle_make" placeholder="Maruti, Toyota…">
+              </div>
+              <div class="col-sm-6">
+                <label class="jf-label">Model <span class="req">*</span></label>
+                <input type="text" class="jf-input" name="vehicle_model" placeholder="Swift, Innova…">
+              </div>
+              <div class="col-sm-4">
+                <label class="jf-label">Year</label>
+                <input type="number" class="jf-input" name="vehicle_year" min="1990" max="2100" placeholder="2022">
+              </div>
+              <div class="col-sm-4">
+                <label class="jf-label">License Plate <span class="req">*</span></label>
+                <input type="text" class="jf-input text-uppercase" name="license_plate" id="licensePlateInput" placeholder="MH02AB1234">
+              </div>
+              <div class="col-sm-4">
+                <label class="jf-label">Fuel Type</label>
+                <select class="jf-input" name="fuel_type">
+                  <option value="">Select…</option>
+                  {% for ft in fuel_types %}
+                  <option value="{{ ft }}">{{ ft }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-sm-6">
+                <label class="jf-label">Color</label>
+                <input type="text" class="jf-input" name="color" placeholder="White, Silver…">
+              </div>
+              <div class="col-sm-6">
+                <label class="jf-label">VIN</label>
+                <input type="text" class="jf-input" name="vin" placeholder="Optional" maxlength="17">
+              </div>
             </div>
-
-            <!-- Complaints checklist builder -->
-            <div class="mt-4">
-                <label class="form-label fw-semibold"><i class="ti ti-alert-circle me-1"></i>Reported Problems</label>
-                <p class="text-muted small mb-2">Add each issue the customer reported. These become actionable items on the job card.</p>
-                <div id="complaintsList"></div>
-                <div class="input-group mt-2">
-                    <input type="text" class="form-control" id="newComplaintInput" placeholder="e.g. AC not cooling…" maxlength="300">
-                    <button type="button" class="btn btn-outline-primary" id="addComplaintBtn">
-                        <i class="ti ti-plus"></i>
-                    </button>
-                </div>
-                <small class="text-muted">Press Enter or click + to add</small>
-            </div>
+            <div class="text-danger small mt-2" id="vehicleError" style="display:none;"></div>
+          </div>
         </div>
+
+      </div>
     </div>
 
-    <div class="d-flex justify-content-between mt-3">
-        <button type="button" class="btn btn-outline-secondary" id="step3Back">
-            <i class="ti ti-arrow-left me-1"></i>Back
-        </button>
-        <button type="submit" class="btn btn-accent btn-lg">
-            <i class="ti ti-circle-plus me-1"></i>Create Job
-        </button>
+    <div class="jf-step-nav">
+      <button type="button" class="jf-btn ghost" id="step2Back">
+        <i class="ti ti-arrow-left"></i> Back
+      </button>
+      <button type="button" class="jf-btn primary lg" id="step2Next">
+        Job Details <i class="ti ti-arrow-right"></i>
+      </button>
     </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════
+       STEP 3 — JOB DETAILS
+  ════════════════════════════════════════════════ -->
+  <div class="jf-step-panel" id="step3">
+    <div class="jf-card">
+      <div class="jf-card-header blue">
+        <div class="header-icon"><i class="ti ti-file-description"></i></div>
+        Job Details
+      </div>
+      <div class="jf-card-body">
+        <div class="row g-3 mb-4">
+          <div class="col-sm-6">
+            <label class="jf-label"><i class="ti ti-calendar me-1"></i>Job Date <span class="req">*</span></label>
+            <input type="date" class="jf-input" name="job_date" id="job_date" min="{{ min_date }}" required>
+          </div>
+          <div class="col-sm-6">
+            <label class="jf-label"><i class="ti ti-gauge me-1"></i>Odometer In (km)</label>
+            <input type="number" class="jf-input" name="odometer_in" min="0" placeholder="e.g. 45 000">
+          </div>
+        </div>
+
+        <!-- Reported Problems -->
+        <div>
+          <label class="jf-label mb-1">
+            <i class="ti ti-alert-circle me-1" style="color:var(--jf-orange);"></i>
+            Reported Problems
+          </label>
+          <p class="text-muted" style="font-size:.8125rem;margin-bottom:.75rem;">
+            Add each issue the customer reports — they become actionable checkboxes on the job card.
+          </p>
+
+          <div class="jf-complaint-list" id="complaintList"></div>
+
+          <div class="d-flex gap-2">
+            <div class="jf-search-wrap flex-grow-1">
+              <i class="ti ti-alert-circle jf-search-icon" style="color:#e85d04;"></i>
+              <input type="text" class="jf-search-input" id="newComplaintInput"
+                     placeholder="e.g. AC not cooling, Brakes squeaking…" maxlength="300"
+                     style="padding-left:2.75rem;">
+            </div>
+            <button type="button" class="jf-btn accent" id="addComplaintBtn" style="padding:.6rem 1rem;">
+              <i class="ti ti-plus"></i>
+            </button>
+          </div>
+          <p class="text-muted" style="font-size:.75rem;margin-top:.375rem;">Press Enter or + to add</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Summary preview strip -->
+    <div class="jf-card mt-3 jf-animate d1" id="summaryStrip">
+      <div class="jf-card-body" style="padding:1rem 1.5rem;">
+        <div class="d-flex align-items-center gap-4 flex-wrap">
+          <div>
+            <div class="jf-info-label">Customer</div>
+            <div class="fw-semibold" id="sumCustomer" style="font-size:.9rem;color:#1e293b;">—</div>
+          </div>
+          <div>
+            <div class="jf-info-label">Vehicle</div>
+            <div class="fw-semibold" id="sumVehicle" style="font-size:.9rem;color:#1e293b;">—</div>
+          </div>
+          <div>
+            <div class="jf-info-label">Complaints</div>
+            <div class="fw-semibold" id="sumComplaints" style="font-size:.9rem;color:#1e293b;">0</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="jf-step-nav">
+      <button type="button" class="jf-btn ghost" id="step3Back">
+        <i class="ti ti-arrow-left"></i> Back
+      </button>
+      <button type="submit" class="jf-btn accent lg">
+        <i class="ti ti-circle-plus"></i> Create Job
+      </button>
+    </div>
+  </div>
+
+  </form>
 </div>
-
-</form>
-{% endblock %}
-
-{% block extra_css %}
-<style>
-.step-indicator {
-    display: flex; align-items: center; gap: 8px;
-}
-.step-num {
-    width: 32px; height: 32px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-weight: 700; font-size: 14px;
-    background: var(--bs-gray-200); color: var(--bs-gray-600);
-    transition: background 0.2s, color 0.2s;
-}
-.step-indicator.active .step-num { background: var(--bs-primary); color: #fff; }
-.step-indicator.completed .step-num { background: var(--bs-success); color: #fff; }
-.step-label { font-size: 13px; font-weight: 500; color: var(--bs-gray-600); }
-.step-indicator.active .step-label { color: var(--bs-primary); font-weight: 600; }
-.step-divider { flex: 1; height: 2px; background: var(--bs-gray-200); max-width: 60px; }
-.vehicle-option {
-    cursor: pointer; padding: 10px 14px; border: 2px solid var(--bs-gray-200);
-    border-radius: 8px; margin-bottom: 8px; transition: border-color 0.15s;
-}
-.vehicle-option:hover { border-color: var(--bs-primary); }
-.vehicle-option.selected { border-color: var(--bs-primary); background: var(--bs-primary-bg-subtle); }
-.complaint-row {
-    display: flex; align-items: center; gap: 8px;
-    padding: 6px 10px; background: var(--bs-gray-100); border-radius: 6px; margin-bottom: 6px;
-}
-.complaint-row span { flex: 1; font-size: 14px; }
-</style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    const form = document.getElementById('newJobForm');
-    let currentStep = 1;
-    let complaintCount = 0;
+  /* ── state ── */
+  let selectedCustomer = null;
+  let selectedVehicleId = null;
+  let complaintCount = 0;
 
-    // ── Stepper helpers ───────────────────────────────────────
-    function goToStep(n) {
-        document.querySelectorAll('.step-panel').forEach(p => p.style.display = 'none');
-        document.getElementById('step' + n).style.display = '';
-        document.querySelectorAll('.step-indicator').forEach(el => {
-            const s = parseInt(el.dataset.step);
-            el.classList.toggle('active', s === n);
-            el.classList.toggle('completed', s < n);
-        });
-        currentStep = n;
-    }
+  /* ── stepper ── */
+  function goToStep(n) {
+    document.querySelectorAll('.jf-step-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('step' + n).classList.add('active');
 
-    // ── Step navigation buttons ───────────────────────────────
-    document.getElementById('step1Next').addEventListener('click', () => goToStep(2));
-    document.getElementById('step2Back').addEventListener('click', () => goToStep(1));
-    document.getElementById('step2Next').addEventListener('click', () => {
-        if (validateStep2()) goToStep(3);
-    });
-    document.getElementById('step3Back').addEventListener('click', () => goToStep(2));
-
-    // Set today's date
-    const dateInput = document.getElementById('job_date');
-    if (dateInput && !dateInput.value) {
-        dateInput.value = new Date().toISOString().split('T')[0];
-    }
-
-    // ── STEP 1: Customer search ───────────────────────────────
-    const searchInput = document.getElementById('customerSearch');
-    const resultsBox = document.getElementById('customerResults');
-    const selectedCard = document.getElementById('selectedCustomerCard');
-    const customerIdInput = document.getElementById('customer_id');
-    const step1Next = document.getElementById('step1Next');
-    let searchTimer;
-
-    searchInput.addEventListener('input', function () {
-        clearTimeout(searchTimer);
-        const q = this.value.trim();
-        if (q.length < 1) { resultsBox.style.display = 'none'; return; }
-        searchTimer = setTimeout(() => fetchCustomers(q), 250);
+    document.querySelectorAll('.jf-step').forEach(el => {
+      const s = +el.dataset.step;
+      el.classList.toggle('active',    s === n);
+      el.classList.toggle('completed', s < n);
+      const circle = el.querySelector('.jf-step-circle');
+      if (s < n) circle.innerHTML = '<i class="ti ti-check" style="font-size:.75rem;"></i>';
+      else if (s === n) circle.textContent = s;
+      else circle.textContent = s;
     });
 
-    function fetchCustomers(q) {
-        fetch(`{{ url_for('technician.api_search_customers') }}?q=${encodeURIComponent(q)}`)
-            .then(r => r.json())
-            .then(customers => {
-                resultsBox.innerHTML = '';
-                if (!customers.length) {
-                    resultsBox.innerHTML = '<div class="list-group-item text-muted small">No customers found</div>';
-                } else {
-                    customers.forEach(c => {
-                        const item = document.createElement('button');
-                        item.type = 'button';
-                        item.className = 'list-group-item list-group-item-action';
-                        item.innerHTML = `<strong>${c.full_name}</strong> <small class="text-muted">${c.phone}</small>`;
-                        item.addEventListener('click', () => selectCustomer(c));
-                        resultsBox.appendChild(item);
-                    });
-                }
-                resultsBox.style.display = '';
-            });
-    }
+    if (n === 3) updateSummary();
+  }
 
-    function selectCustomer(c) {
-        customerIdInput.value = c.customer_id;
-        document.getElementById('selectedCustomerName').textContent = c.full_name;
-        document.getElementById('selectedCustomerMeta').textContent = c.phone + (c.email ? ' · ' + c.email : '');
-        selectedCard.style.display = 'flex';
-        searchInput.style.display = 'none';
-        resultsBox.style.display = 'none';
-        step1Next.disabled = false;
-        loadVehiclesForCustomer(c.customer_id);
-        // collapse new customer form if open
-        document.getElementById('newCustomerForm').style.display = 'none';
-        document.getElementById('toggleNewCustomer').style.display = '';
-    }
+  /* ── nav buttons ── */
+  document.getElementById('step1Next').addEventListener('click', () => goToStep(2));
+  document.getElementById('step2Back').addEventListener('click', () => goToStep(1));
+  document.getElementById('step2Next').addEventListener('click', () => { if (validateStep2()) goToStep(3); });
+  document.getElementById('step3Back').addEventListener('click', () => goToStep(2));
 
-    document.getElementById('clearCustomer').addEventListener('click', () => {
-        customerIdInput.value = '';
-        selectedCard.style.display = 'none';
-        searchInput.style.display = '';
-        searchInput.value = '';
-        step1Next.disabled = true;
-        document.getElementById('vehicleList').innerHTML = '';
-    });
+  /* default date */
+  const dateInput = document.getElementById('job_date');
+  if (dateInput && !dateInput.value) dateInput.value = new Date().toISOString().split('T')[0];
 
-    // Close results on outside click
-    document.addEventListener('click', e => {
-        if (!resultsBox.contains(e.target) && e.target !== searchInput) {
-            resultsBox.style.display = 'none';
+  /* ── STEP 1: customer search ── */
+  const searchInput    = document.getElementById('customerSearch');
+  const resultsBox     = document.getElementById('customerResults');
+  const selectedCard   = document.getElementById('selectedCustomerCard');
+  const customerIdInput = document.getElementById('customer_id');
+  const step1Next      = document.getElementById('step1Next');
+  let searchTimer;
+
+  searchInput.addEventListener('input', function () {
+    clearTimeout(searchTimer);
+    const q = this.value.trim();
+    if (!q) { resultsBox.classList.remove('show'); return; }
+    searchTimer = setTimeout(() => fetchCustomers(q), 220);
+  });
+
+  function fetchCustomers(q) {
+    fetch(`{{ url_for('technician.api_search_customers') }}?q=${encodeURIComponent(q)}`)
+      .then(r => r.json())
+      .then(list => {
+        resultsBox.innerHTML = '';
+        if (!list.length) {
+          resultsBox.innerHTML = '<div style="padding:.75rem 1rem;color:#94a3b8;font-size:.875rem;">No customers found</div>';
+        } else {
+          list.forEach(c => {
+            const initials = ((c.first_name||'').charAt(0) + c.family_name.charAt(0)).toUpperCase();
+            const el = document.createElement('div');
+            el.className = 'jf-search-item';
+            el.innerHTML = `
+              <div class="jf-avatar">${initials}</div>
+              <div class="flex-grow-1">
+                <div style="font-weight:600;font-size:.9rem;">${c.full_name}</div>
+                <div style="font-size:.78rem;color:#64748b;">${c.phone}${c.email ? ' · '+c.email : ''}</div>
+              </div>`;
+            el.addEventListener('click', () => selectCustomer(c));
+            resultsBox.appendChild(el);
+          });
         }
-    });
+        resultsBox.classList.add('show');
+      });
+  }
 
-    // ── Add new customer inline ───────────────────────────────
-    document.getElementById('toggleNewCustomer').addEventListener('click', function () {
-        document.getElementById('newCustomerForm').style.display = 'block';
-        this.style.display = 'none';
-    });
+  function selectCustomer(c) {
+    selectedCustomer = c;
+    customerIdInput.value = c.customer_id;
+    document.getElementById('selectedCustomerName').textContent = c.full_name;
+    document.getElementById('selectedCustomerMeta').textContent =
+      c.phone + (c.email ? ' · ' + c.email : '');
+    selectedCard.classList.add('visible');
+    document.getElementById('searchSection').style.display = 'none';
+    resultsBox.classList.remove('show');
+    step1Next.disabled = false;
+    document.getElementById('vehicleCustomerName').textContent = c.full_name;
+    loadVehicles(c.customer_id);
+    closeExpandPanel('newCustomerPanel');
+  }
 
-    document.getElementById('saveNewCustomer').addEventListener('click', function () {
-        const firstName = document.getElementById('new_first_name').value.trim();
-        const familyName = document.getElementById('new_family_name').value.trim();
-        const email = document.getElementById('new_email').value.trim();
-        const phone = document.getElementById('new_phone').value.trim();
+  document.getElementById('clearCustomer').addEventListener('click', () => {
+    selectedCustomer = null;
+    customerIdInput.value = '';
+    selectedCard.classList.remove('visible');
+    document.getElementById('searchSection').style.display = '';
+    searchInput.value = '';
+    step1Next.disabled = true;
+    document.getElementById('vehicleGrid').innerHTML = '';
+  });
 
-        if (!familyName || !email || !phone) {
-            alert('Family name, email, and phone are required');
-            return;
+  document.addEventListener('click', e => {
+    if (!resultsBox.contains(e.target) && e.target !== searchInput)
+      resultsBox.classList.remove('show');
+  });
+
+  /* ── toggle new customer ── */
+  document.getElementById('toggleNewCustomer').addEventListener('click', function () {
+    openExpandPanel('newCustomerPanel');
+    this.style.display = 'none';
+  });
+
+  document.getElementById('saveNewCustomer').addEventListener('click', function () {
+    const fn  = document.getElementById('new_first_name').value.trim();
+    const sn  = document.getElementById('new_family_name').value.trim();
+    const em  = document.getElementById('new_email').value.trim();
+    const ph  = document.getElementById('new_phone').value.trim();
+    const err = document.getElementById('newCustomerError');
+
+    if (!sn || !em || !ph) { err.textContent = 'Family name, email and phone are required'; err.style.display = ''; return; }
+    err.style.display = 'none';
+
+    const btn = this;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Saving…';
+
+    const fd = new FormData();
+    fd.append('first_name', fn); fd.append('family_name', sn);
+    fd.append('email', em); fd.append('phone', ph);
+
+    fetch('{{ url_for("main.api_create_customer") }}', { method: 'POST', body: fd })
+      .then(r => r.json().catch(() => ({})).then(d => ({ ok: r.ok, data: d })))
+      .then(({ ok, data }) => {
+        if (ok && data.customer_id) {
+          selectCustomer({ customer_id: data.customer_id, full_name: data.full_name,
+                           first_name: fn, family_name: sn, phone: ph, email: em });
+        } else {
+          err.textContent = data.error || 'Failed to create customer';
+          err.style.display = '';
+          btn.disabled = false;
+          btn.innerHTML = '<i class="ti ti-circle-check"></i> Save & Continue';
         }
+      })
+      .catch(() => {
+        err.textContent = 'Network error — please try again';
+        err.style.display = '';
+        btn.disabled = false;
+        btn.innerHTML = '<i class="ti ti-circle-check"></i> Save & Continue';
+      });
+  });
 
-        const btn = this;
-        btn.disabled = true;
-        btn.textContent = 'Saving…';
+  /* ── STEP 2: vehicles ── */
+  function loadVehicles(customerId) {
+    const url = '{{ url_for("technician.api_get_customer_vehicles", customer_id=0) }}'
+                  .replace('/0', '/' + customerId);
+    fetch(url).then(r => r.json()).then(renderVehicles);
+  }
 
-        const fd = new FormData();
-        fd.append('first_name', firstName);
-        fd.append('family_name', familyName);
-        fd.append('email', email);
-        fd.append('phone', phone);
+  function renderVehicles(list) {
+    const grid = document.getElementById('vehicleGrid');
+    grid.innerHTML = '';
+    selectedVehicleId = null;
+    document.getElementById('vehicle_id').value = '';
 
-        fetch('{{ url_for("main.api_create_customer") }}', { method: 'POST', body: fd })
-            .then(r => r.json().catch(() => ({})).then(d => ({ ok: r.ok, status: r.status, data: d })))
-            .then(({ ok, data }) => {
-                if (ok && data.customer_id) {
-                    selectCustomer({
-                        customer_id: data.customer_id,
-                        full_name: (firstName + ' ' + familyName).trim(),
-                        phone: phone,
-                        email: email,
-                    });
-                    document.getElementById('newCustomerForm').style.display = 'none';
-                } else {
-                    alert(data.error || data.message || 'Failed to create customer');
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="ti ti-check me-1"></i>Save Customer & Continue';
-                }
-            })
-            .catch(() => {
-                alert('Network error, please try again');
-                btn.disabled = false;
-                btn.innerHTML = '<i class="ti ti-check me-1"></i>Save Customer & Continue';
-            });
-    });
-
-    // ── STEP 2: Vehicles ──────────────────────────────────────
-    function loadVehiclesForCustomer(customerId) {
-        fetch(`{{ url_for('technician.api_get_customer_vehicles', customer_id=0) }}`.replace('/0', '/' + customerId))
-            .then(r => r.json())
-            .then(vehicles => renderVehicleList(vehicles));
+    if (!list.length) {
+      grid.innerHTML = '<p class="text-muted small">No vehicles on record — add one below.</p>';
+      openExpandPanel('newVehiclePanel');
+      document.getElementById('toggleNewVehicle').style.display = 'none';
+      return;
     }
 
-    function renderVehicleList(vehicles) {
-        const list = document.getElementById('vehicleList');
-        list.innerHTML = '';
-        document.getElementById('vehicle_id').value = '';
-
-        if (!vehicles.length) {
-            list.innerHTML = '<p class="text-muted small">No vehicles on record — add one below.</p>';
-            showNewVehicleForm();
-            return;
-        }
-
-        vehicles.forEach(v => {
-            const div = document.createElement('div');
-            div.className = 'vehicle-option';
-            div.dataset.vehicleId = v.vehicle_id;
-            div.innerHTML = `
-                <div class="d-flex align-items-center gap-2">
-                    <i class="ti ti-car text-primary"></i>
-                    <div>
-                        <div class="fw-semibold">${v.display_name}</div>
-                        ${v.fuel_type ? '<small class="text-muted">' + v.fuel_type + '</small>' : ''}
-                    </div>
-                </div>`;
-            div.addEventListener('click', () => {
-                document.querySelectorAll('.vehicle-option').forEach(o => o.classList.remove('selected'));
-                div.classList.add('selected');
-                document.getElementById('vehicle_id').value = v.vehicle_id;
-                // hide new vehicle form when an existing one is selected
-                document.getElementById('newVehicleForm').style.display = 'none';
-                document.getElementById('toggleNewVehicle').style.display = '';
-            });
-            list.appendChild(div);
-        });
-    }
-
-    function showNewVehicleForm() {
-        document.getElementById('newVehicleForm').style.display = 'block';
-        document.getElementById('toggleNewVehicle').style.display = 'none';
-    }
-
-    document.getElementById('toggleNewVehicle').addEventListener('click', function () {
-        // Deselect any selected vehicle
-        document.querySelectorAll('.vehicle-option').forEach(o => o.classList.remove('selected'));
-        document.getElementById('vehicle_id').value = '';
-        showNewVehicleForm();
+    list.forEach((v, i) => {
+      const card = document.createElement('div');
+      card.className = 'jf-vehicle-card jf-animate';
+      card.style.animationDelay = (i * 0.06) + 's';
+      card.dataset.vid = v.vehicle_id;
+      card.innerHTML = `
+        <div class="jf-vehicle-icon"><i class="ti ti-car"></i></div>
+        <div class="flex-grow-1">
+          <div style="font-weight:700;font-size:.9rem;color:#1e293b;">${v.make} ${v.model}${v.year ? ' <span style="color:#64748b;font-weight:500;">('+v.year+')</span>' : ''}</div>
+          <div style="font-size:.8125rem;font-weight:600;letter-spacing:.04em;color:var(--jf-blue);">${v.license_plate}</div>
+          ${v.fuel_type ? '<div style="font-size:.75rem;color:#94a3b8;margin-top:2px;">'+v.fuel_type+'</div>' : ''}
+        </div>`;
+      card.addEventListener('click', () => {
+        document.querySelectorAll('.jf-vehicle-card').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+        selectedVehicleId = v.vehicle_id;
+        document.getElementById('vehicle_id').value = v.vehicle_id;
+        closeExpandPanel('newVehiclePanel');
+        document.getElementById('toggleNewVehicle').style.display = '';
+      });
+      grid.appendChild(card);
     });
+  }
 
-    // Auto-uppercase license plate
-    document.getElementById('licensePlateInput').addEventListener('input', function () {
-        this.value = this.value.toUpperCase();
-    });
+  document.getElementById('toggleNewVehicle').addEventListener('click', function () {
+    document.querySelectorAll('.jf-vehicle-card').forEach(c => c.classList.remove('selected'));
+    document.getElementById('vehicle_id').value = '';
+    selectedVehicleId = null;
+    openExpandPanel('newVehiclePanel');
+    this.style.display = 'none';
+  });
 
-    function validateStep2() {
-        const vehicleId = document.getElementById('vehicle_id').value;
-        const newVehicleVisible = document.getElementById('newVehicleForm').style.display !== 'none';
+  document.getElementById('licensePlateInput').addEventListener('input', function () {
+    this.value = this.value.toUpperCase();
+  });
 
-        if (vehicleId) return true;  // existing vehicle selected
-
-        if (newVehicleVisible) {
-            const make = form.querySelector('[name=vehicle_make]').value.trim();
-            const model = form.querySelector('[name=vehicle_model]').value.trim();
-            const plate = form.querySelector('[name=license_plate]').value.trim();
-            if (!make || !model || !plate) {
-                document.getElementById('plateError').textContent = 'Make, model, and license plate are required';
-                document.getElementById('plateError').style.display = '';
-                return false;
-            }
-            document.getElementById('plateError').style.display = 'none';
-            return true;
-        }
-
-        // No vehicle selected and form hidden — allow skip (vehicle optional)
-        return true;
+  function validateStep2() {
+    const vid = document.getElementById('vehicle_id').value;
+    if (vid) return true;
+    const panelOpen = document.getElementById('newVehiclePanel').classList.contains('open');
+    if (panelOpen) {
+      const make  = document.querySelector('[name=vehicle_make]').value.trim();
+      const model = document.querySelector('[name=vehicle_model]').value.trim();
+      const plate = document.querySelector('[name=license_plate]').value.trim();
+      if (!make || !model || !plate) {
+        const err = document.getElementById('vehicleError');
+        err.textContent = 'Make, model and license plate are required';
+        err.style.display = '';
+        return false;
+      }
+      document.getElementById('vehicleError').style.display = 'none';
     }
+    return true; // vehicle is optional
+  }
 
-    // ── STEP 3: Complaints ────────────────────────────────────
-    function addComplaint(text) {
-        const t = text.trim();
-        if (!t) return;
-        const row = document.createElement('div');
-        row.className = 'complaint-row';
-        row.innerHTML = `
-            <i class="ti ti-alert-circle text-warning"></i>
-            <span>${t}</span>
-            <input type="hidden" name="complaints[]" value="${t.replace(/"/g, '&quot;')}">
-            <button type="button" class="btn btn-sm btn-link text-danger p-0" title="Remove">
-                <i class="ti ti-x"></i>
-            </button>`;
-        row.querySelector('button').addEventListener('click', () => row.remove());
-        document.getElementById('complaintsList').appendChild(row);
-        complaintCount++;
+  /* ── STEP 3: complaints ── */
+  function addComplaint(text) {
+    const t = text.trim();
+    if (!t) return;
+    complaintCount++;
+
+    const chip = document.createElement('div');
+    chip.className = 'jf-complaint-chip';
+    chip.innerHTML = `
+      <i class="ti ti-alert-circle" style="color:var(--jf-orange);font-size:1rem;flex-shrink:0;"></i>
+      <span class="complaint-text">${t}</span>
+      <input type="hidden" name="complaints[]" value="${t.replace(/"/g, '&quot;')}">
+      <button type="button" class="jf-chip-remove" title="Remove"><i class="ti ti-x"></i></button>`;
+    chip.querySelector('.jf-chip-remove').addEventListener('click', () => {
+      chip.style.opacity = '0'; chip.style.transform = 'scale(.9)';
+      chip.style.transition = 'all .2s'; complaintCount--;
+      setTimeout(() => chip.remove(), 200);
+      updateSummaryCount();
+    });
+    document.getElementById('complaintList').appendChild(chip);
+    updateSummaryCount();
+  }
+
+  document.getElementById('addComplaintBtn').addEventListener('click', () => {
+    const inp = document.getElementById('newComplaintInput');
+    addComplaint(inp.value);
+    inp.value = ''; inp.focus();
+  });
+  document.getElementById('newComplaintInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); document.getElementById('addComplaintBtn').click(); }
+  });
+
+  function updateSummaryCount() {
+    document.getElementById('sumComplaints').textContent = complaintCount;
+  }
+
+  function updateSummary() {
+    if (selectedCustomer)
+      document.getElementById('sumCustomer').textContent = selectedCustomer.full_name;
+
+    const vid = document.getElementById('vehicle_id').value;
+    if (vid) {
+      const card = document.querySelector(`.jf-vehicle-card[data-vid="${vid}"]`);
+      if (card) {
+        const name = card.querySelector('div[style*="font-weight:700"]');
+        document.getElementById('sumVehicle').textContent = name ? name.textContent.trim() : 'Selected';
+      }
+    } else {
+      const make  = document.querySelector('[name=vehicle_make]')?.value.trim();
+      const model = document.querySelector('[name=vehicle_model]')?.value.trim();
+      const plate = document.querySelector('[name=license_plate]')?.value.trim();
+      if (make && model) document.getElementById('sumVehicle').textContent = `${make} ${model}${plate ? ' — '+plate : ''}`;
     }
+  }
 
-    document.getElementById('addComplaintBtn').addEventListener('click', () => {
-        const inp = document.getElementById('newComplaintInput');
-        addComplaint(inp.value);
-        inp.value = '';
-        inp.focus();
-    });
-
-    document.getElementById('newComplaintInput').addEventListener('keydown', e => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            document.getElementById('addComplaintBtn').click();
-        }
-    });
+  /* ── expand/collapse helpers ── */
+  function openExpandPanel(id) {
+    document.getElementById(id).classList.add('open');
+  }
+  function closeExpandPanel(id) {
+    document.getElementById(id).classList.remove('open');
+  }
 });
 </script>
 {% endblock %}

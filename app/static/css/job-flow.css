@@ -1,0 +1,696 @@
+/* =========================================================
+   Job Flow — Antigravity Design System
+   Floating cards · Glassmorphism headers · Staggered entrances
+   ========================================================= */
+
+:root {
+  --jf-blue:       #1e3a5f;
+  --jf-blue-mid:   #2d5282;
+  --jf-blue-light: rgba(30, 58, 95, 0.08);
+  --jf-orange:     #e85d04;
+  --jf-orange-dim: rgba(232, 93, 4, 0.12);
+  --jf-green:      #059669;
+  --jf-green-dim:  rgba(5, 150, 105, 0.10);
+  --jf-surface:    #ffffff;
+  --jf-bg:         #f4f6fa;
+  --jf-border:     rgba(30, 58, 95, 0.10);
+  --jf-shadow-sm:  0 2px 8px rgba(30, 58, 95, 0.07);
+  --jf-shadow-md:  0 8px 24px rgba(30, 58, 95, 0.10);
+  --jf-shadow-lg:  0 20px 48px rgba(30, 58, 95, 0.14);
+  --jf-shadow-float: 0 4px 16px rgba(30, 58, 95, 0.08), 0 1px 4px rgba(30, 58, 95, 0.05);
+  --jf-radius:     14px;
+  --jf-radius-sm:  8px;
+  --jf-transition: 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Page wrapper ─────────────────────────────────────── */
+.jf-page {
+  background: var(--jf-bg);
+  min-height: calc(100vh - 120px);
+  padding-bottom: 3rem;
+}
+
+/* ── Floating card base ───────────────────────────────── */
+.jf-card {
+  background: var(--jf-surface);
+  border: 1px solid var(--jf-border);
+  border-radius: var(--jf-radius);
+  box-shadow: var(--jf-shadow-float);
+  transition: box-shadow var(--jf-transition), transform var(--jf-transition);
+  overflow: visible;
+}
+.jf-card:hover {
+  box-shadow: var(--jf-shadow-md);
+}
+
+/* ── Glassmorphism section header ─────────────────────── */
+.jf-card-header {
+  padding: 1rem 1.5rem;
+  border-radius: calc(var(--jf-radius) - 1px) calc(var(--jf-radius) - 1px) 0 0;
+  border-bottom: 1px solid var(--jf-border);
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  font-weight: 700;
+  font-size: 0.9375rem;
+  letter-spacing: -0.01em;
+}
+.jf-card-header.blue {
+  background: linear-gradient(135deg, #1e3a5f 0%, #2d5282 100%);
+  color: #fff;
+  border-bottom-color: rgba(255,255,255,0.12);
+}
+.jf-card-header.orange {
+  background: linear-gradient(135deg, #c2410c 0%, #e85d04 100%);
+  color: #fff;
+  border-bottom-color: rgba(255,255,255,0.12);
+}
+.jf-card-header.teal {
+  background: linear-gradient(135deg, #0f766e 0%, #0d9488 100%);
+  color: #fff;
+  border-bottom-color: rgba(255,255,255,0.12);
+}
+.jf-card-header.slate {
+  background: linear-gradient(135deg, #334155 0%, #475569 100%);
+  color: #fff;
+  border-bottom-color: rgba(255,255,255,0.12);
+}
+.jf-card-header .header-icon {
+  width: 28px; height: 28px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.875rem;
+  flex-shrink: 0;
+}
+.jf-card-body {
+  padding: 1.5rem;
+}
+
+/* ── Staggered entrance animation ────────────────────── */
+@keyframes jf-float-in {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.jf-animate {
+  opacity: 0;
+  animation: jf-float-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+.jf-animate.d1 { animation-delay: 0.05s; }
+.jf-animate.d2 { animation-delay: 0.12s; }
+.jf-animate.d3 { animation-delay: 0.19s; }
+.jf-animate.d4 { animation-delay: 0.26s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .jf-animate { animation: none; opacity: 1; }
+}
+
+/* ── Stepper ──────────────────────────────────────────── */
+.jf-stepper {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-bottom: 2rem;
+  padding: 1.25rem 2rem;
+  background: var(--jf-surface);
+  border: 1px solid var(--jf-border);
+  border-radius: var(--jf-radius);
+  box-shadow: var(--jf-shadow-sm);
+}
+.jf-step {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+  position: relative;
+  cursor: default;
+}
+.jf-step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  left: calc(50% + 20px);
+  right: calc(-50% + 20px);
+  top: 50%;
+  height: 2px;
+  background: var(--jf-border);
+  transition: background var(--jf-transition);
+  z-index: 0;
+}
+.jf-step.completed:not(:last-child)::after {
+  background: var(--jf-green);
+}
+.jf-step-circle {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: var(--jf-bg);
+  border: 2px solid var(--jf-border);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 0.875rem;
+  color: #94a3b8;
+  transition: all var(--jf-transition);
+  z-index: 1;
+  flex-shrink: 0;
+  position: relative;
+}
+.jf-step.active .jf-step-circle {
+  background: var(--jf-blue);
+  border-color: var(--jf-blue);
+  color: #fff;
+  box-shadow: 0 0 0 5px rgba(30, 58, 95, 0.12);
+}
+.jf-step.completed .jf-step-circle {
+  background: var(--jf-green);
+  border-color: var(--jf-green);
+  color: #fff;
+}
+.jf-step-label {
+  display: flex; flex-direction: column;
+}
+.jf-step-label .step-title {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #94a3b8;
+  line-height: 1.2;
+  transition: color var(--jf-transition);
+}
+.jf-step-label .step-sub {
+  font-size: 0.75rem;
+  color: #cbd5e1;
+  line-height: 1.2;
+}
+.jf-step.active .step-title { color: var(--jf-blue); }
+.jf-step.completed .step-title { color: var(--jf-green); }
+
+/* ── Step panels ──────────────────────────────────────── */
+.jf-step-panel { display: none; }
+.jf-step-panel.active {
+  display: block;
+  animation: jf-float-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* ── Customer search ──────────────────────────────────── */
+.jf-search-wrap { position: relative; }
+.jf-search-input {
+  width: 100%;
+  padding: 0.75rem 1rem 0.75rem 2.75rem;
+  border: 1.5px solid var(--jf-border);
+  border-radius: var(--jf-radius-sm);
+  font-size: 0.9375rem;
+  background: var(--jf-bg);
+  transition: border-color var(--jf-transition), box-shadow var(--jf-transition), background var(--jf-transition);
+  outline: none;
+}
+.jf-search-input:focus {
+  border-color: var(--jf-blue);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(30, 58, 95, 0.10);
+}
+.jf-search-icon {
+  position: absolute;
+  left: 0.875rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+  pointer-events: none;
+  font-size: 1rem;
+}
+.jf-search-results {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0; right: 0;
+  background: #fff;
+  border: 1px solid var(--jf-border);
+  border-radius: var(--jf-radius-sm);
+  box-shadow: var(--jf-shadow-md);
+  z-index: 1100;
+  max-height: 280px;
+  overflow-y: auto;
+  display: none;
+}
+.jf-search-results.show { display: block; }
+.jf-search-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  border-bottom: 1px solid var(--jf-border);
+  transition: background var(--jf-transition);
+}
+.jf-search-item:last-child { border-bottom: none; }
+.jf-search-item:hover { background: var(--jf-blue-light); }
+.jf-avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--jf-blue);
+  color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 0.75rem;
+  flex-shrink: 0;
+}
+.jf-avatar.orange { background: var(--jf-orange); }
+.jf-avatar.green  { background: var(--jf-green); }
+
+/* ── Selected customer card ───────────────────────────── */
+.jf-selected-card {
+  display: none;
+  padding: 0.875rem 1rem;
+  background: var(--jf-green-dim);
+  border: 1.5px solid #059669;
+  border-radius: var(--jf-radius-sm);
+  align-items: center;
+  gap: 0.75rem;
+}
+.jf-selected-card.visible { display: flex; }
+
+/* ── Divider with text ────────────────────────────────── */
+.jf-or-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1.25rem 0;
+  color: #94a3b8;
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+.jf-or-divider::before,
+.jf-or-divider::after {
+  content: ''; flex: 1;
+  height: 1px;
+  background: var(--jf-border);
+}
+
+/* ── Inline form expand ───────────────────────────────── */
+.jf-expand-panel {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity    0.3s ease;
+  opacity: 0;
+}
+.jf-expand-panel.open {
+  max-height: 600px;
+  opacity: 1;
+}
+
+/* ── Floating input fields ────────────────────────────── */
+.jf-field { position: relative; }
+.jf-input {
+  width: 100%;
+  padding: 0.6875rem 0.875rem;
+  border: 1.5px solid var(--jf-border);
+  border-radius: var(--jf-radius-sm);
+  font-size: 0.9375rem;
+  background: var(--jf-bg);
+  transition: border-color var(--jf-transition), box-shadow var(--jf-transition), background var(--jf-transition);
+  outline: none;
+}
+.jf-input:focus {
+  border-color: var(--jf-blue);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(30, 58, 95, 0.10);
+}
+.jf-label {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 0.375rem;
+  letter-spacing: 0.01em;
+}
+.jf-label .req { color: var(--jf-orange); margin-left: 2px; }
+
+/* ── Vehicle option cards ─────────────────────────────── */
+.jf-vehicle-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 0.875rem;
+  margin-bottom: 0.5rem;
+}
+.jf-vehicle-card {
+  padding: 1rem;
+  border: 2px solid var(--jf-border);
+  border-radius: var(--jf-radius-sm);
+  background: var(--jf-surface);
+  cursor: pointer;
+  transition: border-color var(--jf-transition), box-shadow var(--jf-transition), transform var(--jf-transition);
+  display: flex; align-items: center; gap: 0.875rem;
+  will-change: transform;
+}
+.jf-vehicle-card:hover {
+  border-color: var(--jf-blue);
+  box-shadow: var(--jf-shadow-sm);
+  transform: translateY(-2px);
+}
+.jf-vehicle-card.selected {
+  border-color: var(--jf-blue);
+  background: var(--jf-blue-light);
+  box-shadow: 0 0 0 3px rgba(30, 58, 95, 0.10);
+  transform: translateY(-2px);
+}
+.jf-vehicle-icon {
+  width: 44px; height: 44px;
+  background: var(--jf-blue-light);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.375rem;
+  color: var(--jf-blue);
+  flex-shrink: 0;
+}
+.jf-vehicle-card.selected .jf-vehicle-icon {
+  background: var(--jf-blue);
+  color: #fff;
+}
+
+/* ── Complaint chips / checklist ──────────────────────── */
+.jf-complaint-list { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.75rem; }
+.jf-complaint-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.625rem 0.875rem;
+  background: #fff8f1;
+  border: 1.5px solid rgba(232, 93, 4, 0.20);
+  border-radius: 8px;
+  animation: jf-float-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+.jf-complaint-chip .complaint-text {
+  flex: 1;
+  font-size: 0.875rem;
+  color: #1e293b;
+}
+.jf-chip-remove {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(232, 93, 4, 0.12);
+  color: #c2410c;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.75rem;
+  transition: background var(--jf-transition);
+  flex-shrink: 0;
+  padding: 0;
+  line-height: 1;
+}
+.jf-chip-remove:hover { background: rgba(232, 93, 4, 0.25); }
+
+/* Modify-job complaint rows */
+.jf-complaint-row {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 0.875rem 1rem;
+  border-radius: var(--jf-radius-sm);
+  border: 1px solid var(--jf-border);
+  background: #fff;
+  transition: background var(--jf-transition), opacity var(--jf-transition);
+  margin-bottom: 0.5rem;
+}
+.jf-complaint-row.resolved {
+  background: #f0fdf4;
+  border-color: rgba(5, 150, 105, 0.20);
+}
+.jf-complaint-checkbox {
+  width: 20px; height: 20px;
+  accent-color: var(--jf-green);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.jf-complaint-desc {
+  flex: 1;
+  font-size: 0.9rem;
+  color: #1e293b;
+  transition: color var(--jf-transition), text-decoration var(--jf-transition);
+}
+.jf-complaint-row.resolved .jf-complaint-desc {
+  text-decoration: line-through;
+  color: #94a3b8;
+}
+
+/* ── Info grid on detail pages ────────────────────────── */
+.jf-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem 2rem;
+}
+@media (max-width: 575px) { .jf-info-grid { grid-template-columns: 1fr; } }
+.jf-info-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.jf-info-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+}
+.jf-info-value {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* ── Vehicle hero strip ───────────────────────────────── */
+.jf-vehicle-hero {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1.25rem 1.5rem;
+  background: linear-gradient(135deg, #1e3a5f 0%, #2d5282 100%);
+  border-radius: var(--jf-radius) var(--jf-radius) 0 0;
+  color: #fff;
+}
+.jf-vehicle-hero-icon {
+  width: 56px; height: 56px;
+  background: rgba(255,255,255,0.12);
+  backdrop-filter: blur(8px);
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.75rem;
+  flex-shrink: 0;
+}
+.jf-vehicle-hero-name { font-size: 1.125rem; font-weight: 700; line-height: 1.2; }
+.jf-vehicle-hero-plate {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  background: rgba(255,255,255,0.15);
+  padding: 2px 10px;
+  border-radius: 4px;
+  display: inline-block;
+  margin-top: 4px;
+}
+
+/* ── Badge pills ──────────────────────────────────────── */
+.jf-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0.25rem 0.625rem;
+  border-radius: 100px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.jf-badge.green  { background: var(--jf-green-dim); color: #065f46; }
+.jf-badge.orange { background: var(--jf-orange-dim); color: #9a3412; }
+.jf-badge.blue   { background: var(--jf-blue-light); color: var(--jf-blue); }
+.jf-badge.gray   { background: #f1f5f9; color: #475569; }
+.jf-badge.red    { background: #fff1f2; color: #9f1239; }
+
+/* ── Action buttons ───────────────────────────────────── */
+.jf-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  border-radius: var(--jf-radius-sm);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all var(--jf-transition);
+  will-change: transform;
+  text-decoration: none;
+}
+.jf-btn:hover { transform: translateY(-1px); }
+.jf-btn:active { transform: translateY(0); }
+.jf-btn.primary {
+  background: var(--jf-blue);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(30, 58, 95, 0.25);
+}
+.jf-btn.primary:hover {
+  background: var(--jf-blue-mid);
+  box-shadow: 0 4px 14px rgba(30, 58, 95, 0.30);
+  color: #fff;
+}
+.jf-btn.accent {
+  background: var(--jf-orange);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(232, 93, 4, 0.25);
+}
+.jf-btn.accent:hover {
+  background: #cc5003;
+  box-shadow: 0 4px 14px rgba(232, 93, 4, 0.30);
+  color: #fff;
+}
+.jf-btn.ghost {
+  background: transparent;
+  color: #64748b;
+  border: 1.5px solid var(--jf-border);
+}
+.jf-btn.ghost:hover {
+  background: var(--jf-bg);
+  color: #1e293b;
+}
+.jf-btn.lg { padding: 0.75rem 1.625rem; font-size: 0.9375rem; }
+
+/* ── Cost summary box ─────────────────────────────────── */
+.jf-cost-box {
+  background: linear-gradient(135deg, #1e3a5f 0%, #2d5282 100%);
+  border-radius: var(--jf-radius);
+  padding: 1.5rem;
+  color: #fff;
+  box-shadow: var(--jf-shadow-md);
+}
+.jf-cost-label { font-size: 0.8125rem; opacity: 0.7; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; }
+.jf-cost-amount { font-size: 2.25rem; font-weight: 800; line-height: 1; margin-top: 0.25rem; }
+.jf-cost-sub { font-size: 0.8125rem; opacity: 0.65; margin-top: 0.5rem; }
+
+/* ── Odometer stat tile ───────────────────────────────── */
+.jf-stat-tile {
+  text-align: center;
+  padding: 1rem;
+  border-radius: var(--jf-radius-sm);
+  border: 1px solid var(--jf-border);
+  background: var(--jf-surface);
+}
+.jf-stat-tile .stat-value {
+  font-size: 1.5rem; font-weight: 800; color: var(--jf-blue);
+}
+.jf-stat-tile .stat-label {
+  font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.05em; color: #94a3b8; margin-top: 2px;
+}
+
+/* ── Line items table ─────────────────────────────────── */
+.jf-line-table { width: 100%; border-collapse: collapse; }
+.jf-line-table thead th {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--jf-border);
+}
+.jf-line-table tbody tr {
+  border-bottom: 1px solid var(--jf-border);
+  transition: background var(--jf-transition);
+}
+.jf-line-table tbody tr:last-child { border-bottom: none; }
+.jf-line-table tbody tr:hover { background: var(--jf-blue-light); }
+.jf-line-table td { padding: 0.75rem; font-size: 0.9rem; }
+.jf-line-table tfoot td {
+  padding: 0.75rem;
+  font-weight: 700;
+  font-size: 0.9375rem;
+  border-top: 2px solid var(--jf-border);
+}
+
+/* ── Add-row inline form ──────────────────────────────── */
+.jf-add-row {
+  display: flex;
+  gap: 0.625rem;
+  padding: 0.875rem;
+  background: var(--jf-bg);
+  border-radius: var(--jf-radius-sm);
+  align-items: flex-end;
+}
+.jf-add-row .jf-input { background: #fff; }
+
+/* ── Notes textarea ───────────────────────────────────── */
+.jf-textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1.5px solid var(--jf-border);
+  border-radius: var(--jf-radius-sm);
+  font-size: 0.9rem;
+  resize: vertical;
+  background: var(--jf-bg);
+  transition: border-color var(--jf-transition), box-shadow var(--jf-transition), background var(--jf-transition);
+  outline: none;
+  min-height: 100px;
+  font-family: inherit;
+}
+.jf-textarea:focus {
+  border-color: var(--jf-blue);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(30, 58, 95, 0.10);
+}
+
+/* ── Step nav footer ──────────────────────────────────── */
+.jf-step-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 1.5rem;
+  margin-top: 0.5rem;
+}
+
+/* ── Expand-toggle button ─────────────────────────────── */
+.jf-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.875rem;
+  border-radius: 100px;
+  border: 1.5px dashed var(--jf-border);
+  background: transparent;
+  color: var(--jf-blue);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--jf-transition);
+}
+.jf-toggle-btn:hover {
+  border-color: var(--jf-blue);
+  background: var(--jf-blue-light);
+}
+
+/* ── Inline sub-form panel ────────────────────────────── */
+.jf-sub-panel {
+  margin-top: 1rem;
+  padding: 1.25rem;
+  background: var(--jf-bg);
+  border-radius: var(--jf-radius-sm);
+  border: 1px solid var(--jf-border);
+}
+.jf-sub-panel-title {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* ── Complete-job warning box ─────────────────────────── */
+.jf-warning-box {
+  padding: 1rem 1.25rem;
+  background: #fffbeb;
+  border: 1.5px solid #fcd34d;
+  border-radius: var(--jf-radius-sm);
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+.jf-warning-box .warn-icon { color: #d97706; font-size: 1.125rem; margin-top: 1px; flex-shrink: 0; }
