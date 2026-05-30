@@ -57,11 +57,17 @@ class SearchableSelect {
       'padding:0', 'line-height:1', 'display:none', 'font-size:.875rem'
     ].join(';');
 
-    // Dropdown
+    // Dropdown — appended to body and positioned via fixed coords to escape
+    // any stacking context created by gradient card headers.
     this.dropdown = document.createElement('div');
-    this.dropdown.className = 'jf-search-results';
+    this.dropdown.className = 'jf-search-results ss-fixed-dropdown';
+    this.dropdown.style.cssText = [
+      'position:fixed', 'z-index:9999', 'min-width:200px',
+      'display:none'
+    ].join(';');
+    document.body.appendChild(this.dropdown);
 
-    wrap.append(icon, this.input, this.clearBtn, this.dropdown);
+    wrap.append(icon, this.input, this.clearBtn);
 
     // Hide original element, insert wrapper before it
     this.target.style.display = 'none';
@@ -71,7 +77,10 @@ class SearchableSelect {
   }
 
   _bindEvents() {
-    this.input.addEventListener('focus', () => this._render(this.input.value));
+    this.input.addEventListener('focus', () => {
+      this._reposition();
+      this._render(this.input.value);
+    });
     this.input.addEventListener('input', () => {
       this._render(this.input.value);
       this.clearBtn.style.display = this.input.value ? '' : 'none';
@@ -81,18 +90,36 @@ class SearchableSelect {
       this.input.value = '';
       this._setValue('', '');
       this.clearBtn.style.display = 'none';
-      this.dropdown.classList.remove('show');
+      this._closeDropdown();
       this.input.focus();
     });
 
     document.addEventListener('click', e => {
       if (!this.input.contains(e.target) && !this.dropdown.contains(e.target)) {
-        this.dropdown.classList.remove('show');
-        // If nothing selected, restore label
+        this._closeDropdown();
         if (!this._getValue()) this.input.value = '';
         else this.input.value = this._selectedLabel;
       }
     });
+
+    // Reposition on scroll or resize so the dropdown tracks the input
+    this._repositionHandler = () => {
+      if (this.dropdown.style.display !== 'none') this._reposition();
+    };
+    window.addEventListener('scroll', this._repositionHandler, true);
+    window.addEventListener('resize', this._repositionHandler);
+  }
+
+  _reposition() {
+    const rect = this.input.getBoundingClientRect();
+    this.dropdown.style.top   = (rect.bottom + 6) + 'px';
+    this.dropdown.style.left  = rect.left + 'px';
+    this.dropdown.style.width = rect.width + 'px';
+  }
+
+  _closeDropdown() {
+    this.dropdown.style.display = 'none';
+    this.dropdown.classList.remove('show');
   }
 
   _render(q) {
@@ -132,6 +159,8 @@ class SearchableSelect {
       }
     }
 
+    this._reposition();
+    this.dropdown.style.display = 'block';
     this.dropdown.classList.add('show');
   }
 
@@ -140,7 +169,7 @@ class SearchableSelect {
     this._selectedLabel = item.label;
     this._setValue(item.value, item.label);
     this.clearBtn.style.display = '';
-    this.dropdown.classList.remove('show');
+    this._closeDropdown();
     if (this.onChange) this.onChange(item);
   }
 

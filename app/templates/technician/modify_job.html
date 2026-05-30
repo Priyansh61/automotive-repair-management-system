@@ -1,146 +1,155 @@
 {% extends "base/layout.html" %}
-{% block title %}Job #{{ data.job_id }} — RepairOS{% endblock %}
+{% block title %}Edit Job #{{ data.job_id }} — RepairOS{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/job-flow.css') }}">
 {% endblock %}
 
+{% block breadcrumb_items %}
+  <li class="breadcrumb-item"><a href="{{ url_for('main.dashboard') }}">Dashboard</a></li>
+  <li class="breadcrumb-item"><a href="{{ url_for('technician.current_jobs') }}">Jobs</a></li>
+  <li class="breadcrumb-item active">Edit #{{ data.job_id }}</li>
+{% endblock %}
+
 {% block content %}
 <div class="jf-page">
 
-  <!-- Header -->
-  <div class="d-flex justify-content-between align-items-center mb-3 jf-animate d1">
-    <div>
-      <h1 class="h4 fw-bold mb-0" style="color:#1e293b;">
-        Job <span style="color:var(--jf-blue);">#{{ data.job_id }}</span>
-      </h1>
-      <p class="text-muted small mb-0">
-        {{ data.first_name }} {{ data.family_name }} ·
+  <!-- ── Page Header Band ──────────────────────────────────── -->
+  <div class="jf-page-header jf-animate d1">
+    <div class="jf-page-header-meta">
+      <div class="jf-page-header-title">
+        <span style="color:var(--jf-blue);">#{{ data.job_id }}</span>
+        {{ data.first_name }} {{ data.family_name }}
+        {% if data.completed %}
+          <span class="jf-badge green" style="font-size:.75rem;"><i class="ti ti-circle-check"></i> Completed</span>
+        {% else %}
+          <span class="jf-badge orange" style="font-size:.75rem;"><i class="ti ti-clock"></i> In Progress</span>
+        {% endif %}
+      </div>
+      <div class="jf-page-header-sub">
+        <i class="ti ti-calendar" style="font-size:.875rem;color:#94a3b8;"></i>
         {% if data.job_date is string %}{{ data.job_date }}
         {% else %}{{ data.job_date.strftime('%d %b %Y') if data.job_date else '—' }}{% endif %}
-      </p>
+        {% if data.vehicle %}
+        <span style="color:#cbd5e1;">·</span>
+        <i class="ti ti-car" style="font-size:.875rem;color:#94a3b8;"></i>
+        <strong style="color:#475569;">{{ data.vehicle.license_plate }}</strong>
+        <span style="color:#cbd5e1;">{{ data.vehicle.make }} {{ data.vehicle.model }}</span>
+        {% endif %}
+      </div>
     </div>
-    <div class="d-flex gap-2">
+    <div class="jf-page-header-actions">
       <a href="{{ url_for('technician.job_detail', job_id=data.job_id) }}" class="jf-btn ghost">
         <i class="ti ti-eye"></i> View
       </a>
       <a href="{{ url_for('technician.current_jobs') }}" class="jf-btn ghost">
         <i class="ti ti-arrow-left"></i> Jobs
       </a>
+      {% if not data.completed %}
+      <button type="button" class="jf-btn accent lg" id="openCompleteModal">
+        <i class="ti ti-circle-check"></i> Mark as Completed
+      </button>
+      {% endif %}
     </div>
   </div>
 
   {% if data.completed %}
   <div class="alert alert-success d-flex align-items-center gap-2 mb-3 jf-animate d1" role="alert">
-    <i class="ti ti-circle-check fs-5"></i>
-    <strong>Completed</strong> — This job is locked. No further changes can be made.
+    <i class="ti ti-lock fs-5"></i>
+    <strong>Job Locked</strong> — This job is completed. All fields are read-only.
   </div>
   {% endif %}
 
   <div class="row g-3">
 
-    <!-- ── LEFT COLUMN ──────────────────────────────── -->
-    <div class="col-lg-4">
+    <!-- ── LEFT SIDEBAR ──────────────────────────────────── -->
+    <div class="col-xl-3 col-lg-4">
+      <div class="jf-sidebar-sticky">
 
-      <!-- Customer + Job info -->
-      <div class="jf-card mb-3 jf-animate d1">
-        <div class="jf-card-header blue">
-          <div class="header-icon"><i class="ti ti-user"></i></div>
-          Customer & Job
-        </div>
-        <div class="jf-card-body">
-          <div class="jf-info-grid">
-            <div class="jf-info-row">
-              <div class="jf-info-label">Customer</div>
-              <div class="jf-info-value">{{ data.first_name }} {{ data.family_name }}</div>
-            </div>
-            <div class="jf-info-row">
-              <div class="jf-info-label">Job Date</div>
-              <div class="jf-info-value">
-                {% if data.job_date is string %}{{ data.job_date }}
-                {% else %}{{ data.job_date.strftime('%d %b %Y') if data.job_date else '—' }}{% endif %}
-              </div>
-            </div>
-            {% if data.odometer_in %}
-            <div class="jf-info-row">
-              <div class="jf-info-label">Odometer In</div>
-              <div class="jf-info-value"><i class="ti ti-gauge text-muted"></i> {{ data.odometer_in | int }} km</div>
-            </div>
-            {% endif %}
-            <div class="jf-info-row">
-              <div class="jf-info-label">Status</div>
-              <div class="jf-info-value">
-                {% if data.completed %}
-                  <span class="jf-badge green"><i class="ti ti-circle-check"></i> Completed</span>
-                {% else %}
-                  <span class="jf-badge orange"><i class="ti ti-clock"></i> In Progress</span>
-                {% endif %}
-              </div>
-            </div>
-            <div class="jf-info-row">
-              <div class="jf-info-label">Payment</div>
-              <div class="jf-info-value">
-                {% if data.paid %}
-                  <span class="jf-badge green"><i class="ti ti-credit-card"></i> Paid</span>
-                {% else %}
-                  <span class="jf-badge red"><i class="ti ti-alert-triangle"></i> Unpaid</span>
-                {% endif %}
-              </div>
+        <!-- Job Context -->
+        <div class="jf-context-card jf-animate d2">
+          <div style="padding:.875rem 1.125rem;background:#1e4d8c;color:#fff;border-radius:13px 13px 0 0;border-bottom:1px solid #163e72;">
+            <div style="font-size:.6875rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;opacity:.7;">Job Details</div>
+            <div style="font-size:1rem;font-weight:700;margin-top:.125rem;">
+              Job <span style="opacity:.8;">#{{ data.job_id }}</span>
             </div>
           </div>
-        </div>
-      </div>
-
-      <!-- Vehicle card -->
-      {% if data.vehicle %}
-      {% set v = data.vehicle %}
-      <div class="jf-card mb-3 jf-animate d2" style="overflow:hidden;">
-        <div class="jf-vehicle-hero">
-          <div class="jf-vehicle-hero-icon"><i class="ti ti-car"></i></div>
-          <div>
-            <div class="jf-vehicle-hero-name">{{ v.make }} {{ v.model }}{% if v.year %} ({{ v.year }}){% endif %}</div>
-            <div class="jf-vehicle-hero-plate">{{ v.license_plate }}</div>
+          <div class="jf-context-row">
+            <span class="jf-context-label"><i class="ti ti-calendar me-1"></i>Date</span>
+            <span class="jf-context-value">
+              {% if data.job_date is string %}{{ data.job_date }}
+              {% else %}{{ data.job_date.strftime('%d %b %Y') if data.job_date else '—' }}{% endif %}
+            </span>
           </div>
-        </div>
-        <div class="jf-card-body" style="padding:.875rem 1.25rem;">
-          <div class="d-flex flex-wrap gap-2">
-            {% if v.fuel_type %}<span class="jf-badge blue"><i class="ti ti-flame"></i> {{ v.fuel_type }}</span>{% endif %}
-            {% if v.color   %}<span class="jf-badge gray"><i class="ti ti-palette"></i> {{ v.color }}</span>{% endif %}
-            {% if v.vin     %}<span class="jf-badge gray" title="VIN"><i class="ti ti-hash"></i> {{ v.vin }}</span>{% endif %}
+          {% if data.odometer_in %}
+          <div class="jf-context-row">
+            <span class="jf-context-label"><i class="ti ti-gauge me-1"></i>Odometer</span>
+            <span class="jf-context-value">{{ data.odometer_in | int }} km</span>
           </div>
-        </div>
-      </div>
-      {% endif %}
-
-      <!-- Technician notes -->
-      <div class="jf-card jf-animate d3">
-        <div class="jf-card-header slate">
-          <div class="header-icon"><i class="ti ti-notes"></i></div>
-          Technician Notes
-        </div>
-        <div class="jf-card-body">
-          {% if not job_completed %}
-          <form method="POST" action="{{ url_for('technician.save_technician_notes', job_id=data.job_id) }}">
-            <textarea name="technician_notes" class="jf-textarea" rows="3"
-                      placeholder="Internal notes — not visible to customer…">{{ data.technician_notes or '' }}</textarea>
-            <div class="d-flex justify-content-end mt-2">
-              <button type="submit" class="jf-btn primary" style="padding:.5rem 1rem;font-size:.8125rem;">
-                <i class="ti ti-device-floppy"></i> Save Notes
-              </button>
-            </div>
-          </form>
-          {% else %}
-          <p class="mb-0" style="white-space:pre-line;color:#475569;font-size:.9rem;">{{ data.technician_notes or 'No notes.' }}</p>
           {% endif %}
+          <div class="jf-context-row">
+            <span class="jf-context-label"><i class="ti ti-activity me-1"></i>Status</span>
+            <span class="jf-context-value">
+              {% if data.completed %}
+                <span class="jf-badge green"><i class="ti ti-circle-check"></i> Done</span>
+              {% else %}
+                <span class="jf-badge orange"><i class="ti ti-clock"></i> Active</span>
+              {% endif %}
+            </span>
+          </div>
+          <div class="jf-context-row">
+            <span class="jf-context-label"><i class="ti ti-credit-card me-1"></i>Payment</span>
+            <span class="jf-context-value">
+              {% if data.paid %}
+                <span class="jf-badge green"><i class="ti ti-check"></i> Paid</span>
+              {% else %}
+                <span class="jf-badge red"><i class="ti ti-alert-triangle"></i> Unpaid</span>
+              {% endif %}
+            </span>
+          </div>
         </div>
-      </div>
 
+        <!-- Vehicle -->
+        {% if data.vehicle %}
+        {% set v = data.vehicle %}
+        <div class="jf-card jf-animate d3" style="overflow:hidden;margin-bottom:1rem;">
+          <div class="jf-vehicle-hero" style="padding:1rem 1.125rem;">
+            <div class="jf-vehicle-hero-icon" style="width:44px;height:44px;font-size:1.375rem;border-radius:10px;">
+              <i class="ti ti-car"></i>
+            </div>
+            <div>
+              <div class="jf-vehicle-hero-name" style="font-size:.9375rem;">{{ v.make }} {{ v.model }}{% if v.year %} ({{ v.year }}){% endif %}</div>
+              <div class="jf-vehicle-hero-plate" style="font-size:.75rem;">{{ v.license_plate }}</div>
+            </div>
+          </div>
+          <div class="jf-card-body" style="padding:.75rem 1.125rem;">
+            <div class="d-flex flex-wrap gap-1">
+              {% if v.fuel_type %}<span class="jf-badge blue"><i class="ti ti-flame"></i> {{ v.fuel_type }}</span>{% endif %}
+              {% if v.color   %}<span class="jf-badge gray"><i class="ti ti-palette"></i> {{ v.color }}</span>{% endif %}
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Running Cost -->
+        <div class="jf-mini-cost jf-animate d3">
+          <div class="cost-label">Total Cost</div>
+          <div class="cost-amount" id="sidebarTotal">{{ currency_symbol }}{{ "%.2f"|format(data.total_cost|float) }}</div>
+          <div class="cost-sub">Services + Parts</div>
+        </div>
+
+        <!-- Save & Back -->
+        <a href="{{ url_for('technician.current_jobs') }}" class="jf-btn ghost w-100 justify-content-center jf-animate d4">
+          <i class="ti ti-arrow-left"></i> Save & Back to Jobs
+        </a>
+
+      </div>
     </div>
 
-    <!-- ── RIGHT COLUMN ─────────────────────────────── -->
-    <div class="col-lg-8">
+    <!-- ── MAIN WORK AREA ─────────────────────────────────── -->
+    <div class="col-xl-9 col-lg-8">
 
-      <!-- Reported problems -->
+      <!-- 1 · Reported Problems ─────────────────────────── -->
       <div class="jf-card mb-3 jf-animate d2">
         <div class="jf-card-header orange">
           <div class="header-icon"><i class="ti ti-alert-circle"></i></div>
@@ -156,7 +165,7 @@
         </div>
         <div class="jf-card-body">
           {% if complaints %}
-          <div id="complaintListModify">
+          <div id="complaintListModify" class="mb-3">
             {% for c in complaints %}
             <div class="jf-complaint-row {% if c.is_resolved %}resolved{% endif %}" id="cr-{{ c.complaint_id }}">
               <input type="checkbox" class="jf-complaint-checkbox"
@@ -174,245 +183,287 @@
             {% endfor %}
           </div>
           {% else %}
-          <p class="text-muted mb-2" style="font-size:.875rem;">No problems reported at intake.</p>
+          <p class="text-muted mb-3" style="font-size:.875rem;">No problems reported at intake.</p>
           {% endif %}
 
           {% if not job_completed %}
           <form method="POST" action="{{ url_for('technician.add_complaint', job_id=data.job_id) }}"
-                class="d-flex gap-2 mt-3">
+                class="d-flex gap-2">
             <div class="jf-search-wrap flex-grow-1">
               <i class="ti ti-alert-circle jf-search-icon" style="color:#e85d04;"></i>
               <input type="text" name="description" class="jf-search-input" required maxlength="300"
-                     placeholder="Add another complaint…" style="padding-left:2.75rem;">
+                     placeholder="Describe another problem…" style="padding-left:2.75rem;">
             </div>
-            <button type="submit" class="jf-btn accent" style="padding:.6rem 1rem;">
-              <i class="ti ti-plus"></i>
+            <button type="submit" class="jf-btn accent" style="padding:.6rem 1rem;white-space:nowrap;">
+              <i class="ti ti-plus"></i> Add
             </button>
           </form>
           {% endif %}
         </div>
       </div>
 
-      <!-- Services -->
+      <!-- 2 · Services ─────────────────────────────────── -->
       <div class="jf-card mb-3 jf-animate d2">
         <div class="jf-card-header teal">
           <div class="header-icon"><i class="ti ti-settings"></i></div>
           Services
-        </div>
-        <div class="jf-card-body" style="padding:0;">
-
           {% if services %}
-          <table class="jf-line-table">
-            <thead>
-              <tr>
-                <th>Service</th>
-                <th style="text-align:center;">Qty</th>
-                <th style="text-align:right;">Unit</th>
-                <th style="text-align:right;">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% set stotal = namespace(v=0) %}
-              {% for s in services %}
-              {% set lt = s.cost|float * s.qty|int %}
-              {% set stotal.v = stotal.v + lt %}
-              <tr>
-                <td><span style="font-weight:600;">{{ s.service_name }}</span></td>
-                <td style="text-align:center;">{{ s.qty }}</td>
-                <td style="text-align:right;">{{ currency_symbol }}{{ "%.2f"|format(s.cost|float) }}</td>
-                <td style="text-align:right;font-weight:600;">{{ currency_symbol }}{{ "%.2f"|format(lt) }}</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-            <tfoot>
-              <tr>
-                <td colspan="3" style="text-align:right;padding:.75rem;">Subtotal</td>
-                <td style="text-align:right;padding:.75rem;color:var(--jf-blue);">{{ currency_symbol }}{{ "%.2f"|format(stotal.v) }}</td>
-              </tr>
-            </tfoot>
-          </table>
-          {% else %}
-          <div style="padding:1.5rem;text-align:center;color:#94a3b8;">
-            <i class="ti ti-settings" style="font-size:2rem;opacity:.3;display:block;margin-bottom:.5rem;"></i>
-            No services added yet
-          </div>
-          {% endif %}
-
-          {% if not job_completed %}
-          <div class="jf-add-row">
-            <form method="POST" action="{{ url_for('technician.add_service_to_job', job_id=data.job_id) }}"
-                  class="d-flex gap-2 flex-grow-1 align-items-end flex-wrap" id="addServiceForm">
-              <div class="flex-grow-1" style="min-width:200px;">
-                <label class="jf-label">Service</label>
-                <select class="jf-input" name="service_id" id="serviceSelect" required>
-                  <option value="">Select service…</option>
-                  {% for s in all_services %}
-                  <option value="{{ s.service_id }}">{{ s.service_name }} — {{ currency_symbol }}{{ "%.2f"|format(s.cost|float) }}</option>
-                  {% endfor %}
-                </select>
-              </div>
-              <div style="width:90px;">
-                <label class="jf-label">Qty</label>
-                <input type="number" name="quantity" class="jf-input" min="1" value="1" required>
-              </div>
-              <button type="submit" class="jf-btn primary" style="padding:.6rem 1rem;">
-                <i class="ti ti-plus"></i> Add
-              </button>
-            </form>
-          </div>
+          <span class="ms-auto" style="font-size:.8125rem;font-weight:500;opacity:.85;">{{ services|length }} line{{ 's' if services|length != 1 }}</span>
           {% endif %}
         </div>
-      </div>
 
-      <!-- Parts -->
-      <div class="jf-card mb-3 jf-animate d3">
-        <div class="jf-card-header" style="background:linear-gradient(135deg,#065f46 0%,#059669 100%);color:#fff;border-bottom-color:rgba(255,255,255,.12);">
-          <div class="header-icon"><i class="ti ti-puzzle"></i></div>
-          Parts
+        {% if services %}
+        <table class="jf-line-table">
+          <thead>
+            <tr>
+              <th>Service</th>
+              <th style="text-align:center;">Qty</th>
+              <th style="text-align:right;">Unit</th>
+              <th style="text-align:right;">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% set stotal = namespace(v=0) %}
+            {% for s in services %}
+            {% set lt = s.cost|float * s.qty|int %}
+            {% set stotal.v = stotal.v + lt %}
+            <tr>
+              <td><span style="font-weight:600;">{{ s.service_name }}</span></td>
+              <td style="text-align:center;">{{ s.qty }}</td>
+              <td style="text-align:right;">{{ currency_symbol }}{{ "%.2f"|format(s.cost|float) }}</td>
+              <td style="text-align:right;font-weight:600;">{{ currency_symbol }}{{ "%.2f"|format(lt) }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="3" style="text-align:right;padding:.75rem;color:#64748b;">Services Subtotal</td>
+              <td style="text-align:right;padding:.75rem;color:var(--jf-blue);font-size:1rem;">{{ currency_symbol }}{{ "%.2f"|format(stotal.v) }}</td>
+            </tr>
+          </tfoot>
+        </table>
+        {% else %}
+        <div style="padding:2rem;text-align:center;color:#94a3b8;">
+          <i class="ti ti-settings" style="font-size:2rem;opacity:.3;display:block;margin-bottom:.5rem;"></i>
+          No services added yet
         </div>
-        <div class="jf-card-body" style="padding:0;">
-
-          {% if parts %}
-          <table class="jf-line-table">
-            <thead>
-              <tr>
-                <th>Part</th>
-                <th style="text-align:center;">Qty</th>
-                <th style="text-align:right;">Unit</th>
-                <th style="text-align:right;">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% set ptotal = namespace(v=0) %}
-              {% for p in parts %}
-              {% set lt = p.cost|float * p.qty|int %}
-              {% set ptotal.v = ptotal.v + lt %}
-              <tr>
-                <td><span style="font-weight:600;">{{ p.part_name }}</span></td>
-                <td style="text-align:center;">{{ p.qty }}</td>
-                <td style="text-align:right;">{{ currency_symbol }}{{ "%.2f"|format(p.cost|float) }}</td>
-                <td style="text-align:right;font-weight:600;">{{ currency_symbol }}{{ "%.2f"|format(lt) }}</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-            <tfoot>
-              <tr>
-                <td colspan="3" style="text-align:right;padding:.75rem;">Subtotal</td>
-                <td style="text-align:right;padding:.75rem;color:var(--jf-blue);">{{ currency_symbol }}{{ "%.2f"|format(ptotal.v) }}</td>
-              </tr>
-            </tfoot>
-          </table>
-          {% else %}
-          <div style="padding:1.5rem;text-align:center;color:#94a3b8;">
-            <i class="ti ti-puzzle" style="font-size:2rem;opacity:.3;display:block;margin-bottom:.5rem;"></i>
-            No parts added yet
-          </div>
-          {% endif %}
-
-          {% if not job_completed %}
-          <div class="jf-add-row">
-            <form method="POST" action="{{ url_for('technician.add_part_to_job', job_id=data.job_id) }}"
-                  class="d-flex gap-2 flex-grow-1 align-items-end flex-wrap" id="addPartForm">
-              <div class="flex-grow-1" style="min-width:200px;">
-                <label class="jf-label">Part</label>
-                <select class="jf-input" name="part_id" id="partSelect" required>
-                  <option value="">Select part…</option>
-                  {% for p in all_parts %}
-                  <option value="{{ p.part_id }}">{{ p.part_name }} — {{ currency_symbol }}{{ "%.2f"|format(p.cost|float) }}</option>
-                  {% endfor %}
-                </select>
-              </div>
-              <div style="width:90px;">
-                <label class="jf-label">Qty</label>
-                <input type="number" name="quantity" class="jf-input" min="1" value="1" required>
-              </div>
-              <button type="submit" class="jf-btn accent" style="padding:.6rem 1rem;">
-                <i class="ti ti-plus"></i> Add
-              </button>
-            </form>
-          </div>
-          {% endif %}
-        </div>
-      </div>
-
-      <!-- Cost summary -->
-      <div class="jf-cost-box jf-animate d4">
-        <div class="d-flex justify-content-between align-items-center">
-          <div>
-            <div class="jf-cost-label">Total Cost</div>
-            <div class="jf-cost-amount">{{ currency_symbol }}{{ "%.2f"|format(data.total_cost|float) }}</div>
-            <div class="jf-cost-sub">Services + Parts</div>
-          </div>
-          <div class="d-flex flex-column gap-2 align-items-end">
-            {% if data.paid %}
-              <span class="jf-badge green" style="font-size:.875rem;padding:.4rem .875rem;">
-                <i class="ti ti-credit-card"></i> Paid
-              </span>
-            {% else %}
-              <span class="jf-badge" style="background:rgba(255,255,255,.15);color:#fff;font-size:.875rem;padding:.4rem .875rem;">
-                <i class="ti ti-clock"></i> Unpaid
-              </span>
-            {% endif %}
-          </div>
-        </div>
-      </div>
-
-      <!-- Action row -->
-      <div class="d-flex justify-content-between align-items-center mt-3 jf-animate d4">
-        <a href="{{ url_for('technician.current_jobs') }}" class="jf-btn ghost">
-          <i class="ti ti-arrow-left"></i> Save & Back to Jobs
-        </a>
-        {% if not data.completed %}
-        <form action="{{ url_for('technician.complete_job', job_id=data.job_id) }}" method="POST" class="d-inline">
-          <button type="submit" class="jf-btn accent lg"
-            onclick="return confirm('Mark this job as completed? This cannot be undone.')">
-            <i class="ti ti-circle-check"></i> Mark as Completed
-          </button>
-        </form>
         {% endif %}
+
+        {% if not job_completed %}
+        <div class="jf-add-row">
+          <form method="POST" action="{{ url_for('technician.add_service_to_job', job_id=data.job_id) }}"
+                class="d-flex gap-2 flex-grow-1 align-items-end flex-wrap" id="addServiceForm">
+            <div class="flex-grow-1" style="min-width:180px;">
+              <label class="jf-label">Service</label>
+              <select class="jf-input" name="service_id" id="serviceSelect" required>
+                <option value="">Select service…</option>
+                {% for s in all_services %}
+                <option value="{{ s.service_id }}">{{ s.service_name }} — {{ currency_symbol }}{{ "%.2f"|format(s.cost|float) }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div style="width:90px;flex-shrink:0;">
+              <label class="jf-label">Qty</label>
+              <input type="number" name="quantity" class="jf-input" min="1" value="1" required>
+            </div>
+            <button type="submit" class="jf-btn primary" style="padding:.6rem 1.125rem;white-space:nowrap;">
+              <i class="ti ti-plus"></i> Add Service
+            </button>
+          </form>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- 3 · Parts ─────────────────────────────────────── -->
+      <div class="jf-card mb-3 jf-animate d3">
+        <div class="jf-card-header teal">
+          <div class="header-icon"><i class="ti ti-package"></i></div>
+          Parts
+          {% if parts %}
+          <span class="ms-auto" style="font-size:.8125rem;font-weight:500;opacity:.85;">{{ parts|length }} line{{ 's' if parts|length != 1 }}</span>
+          {% endif %}
+        </div>
+
+        {% if parts %}
+        <table class="jf-line-table">
+          <thead>
+            <tr>
+              <th>Part</th>
+              <th style="text-align:center;">Qty</th>
+              <th style="text-align:right;">Unit</th>
+              <th style="text-align:right;">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% set ptotal = namespace(v=0) %}
+            {% for p in parts %}
+            {% set lt = p.cost|float * p.qty|int %}
+            {% set ptotal.v = ptotal.v + lt %}
+            <tr>
+              <td><span style="font-weight:600;">{{ p.part_name }}</span></td>
+              <td style="text-align:center;">{{ p.qty }}</td>
+              <td style="text-align:right;">{{ currency_symbol }}{{ "%.2f"|format(p.cost|float) }}</td>
+              <td style="text-align:right;font-weight:600;">{{ currency_symbol }}{{ "%.2f"|format(lt) }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="3" style="text-align:right;padding:.75rem;color:#64748b;">Parts Subtotal</td>
+              <td style="text-align:right;padding:.75rem;color:#059669;font-size:1rem;">{{ currency_symbol }}{{ "%.2f"|format(ptotal.v) }}</td>
+            </tr>
+          </tfoot>
+        </table>
+        {% else %}
+        <div style="padding:2rem;text-align:center;color:#94a3b8;">
+          <i class="ti ti-package" style="font-size:2rem;opacity:.3;display:block;margin-bottom:.5rem;"></i>
+          No parts added yet
+        </div>
+        {% endif %}
+
+        {% if not job_completed %}
+        <div class="jf-add-row">
+          <form method="POST" action="{{ url_for('technician.add_part_to_job', job_id=data.job_id) }}"
+                class="d-flex gap-2 flex-grow-1 align-items-end flex-wrap" id="addPartForm">
+            <div class="flex-grow-1" style="min-width:180px;">
+              <label class="jf-label">Part</label>
+              <select class="jf-input" name="part_id" id="partSelect" required>
+                <option value="">Select part…</option>
+                {% for p in all_parts %}
+                <option value="{{ p.part_id }}">{{ p.part_name }} — {{ currency_symbol }}{{ "%.2f"|format(p.cost|float) }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div style="width:90px;flex-shrink:0;">
+              <label class="jf-label">Qty</label>
+              <input type="number" name="quantity" class="jf-input" min="1" value="1" required>
+            </div>
+            <button type="submit" class="jf-btn accent" style="padding:.6rem 1.125rem;white-space:nowrap;">
+              <i class="ti ti-plus"></i> Add Part
+            </button>
+          </form>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- 4 · Technician Notes ─────────────────────────── -->
+      <div class="jf-card jf-animate d4">
+        <div class="jf-card-header slate">
+          <div class="header-icon"><i class="ti ti-notes"></i></div>
+          Technician Notes
+          <span class="ms-auto" style="font-size:.75rem;font-weight:400;opacity:.75;">Internal — not visible to customer</span>
+        </div>
+        <div class="jf-card-body">
+          {% if not job_completed %}
+          <form method="POST" action="{{ url_for('technician.save_technician_notes', job_id=data.job_id) }}">
+            <textarea name="technician_notes" class="jf-textarea" rows="4"
+                      placeholder="Observations, findings, caveats…">{{ data.technician_notes or '' }}</textarea>
+            <div class="d-flex justify-content-end mt-2">
+              <button type="submit" class="jf-btn primary">
+                <i class="ti ti-device-floppy"></i> Save Notes
+              </button>
+            </div>
+          </form>
+          {% else %}
+          <p class="mb-0" style="white-space:pre-line;color:#475569;font-size:.9rem;">
+            {{ data.technician_notes or 'No notes recorded.' }}
+          </p>
+          {% endif %}
+        </div>
       </div>
 
     </div>
   </div>
 </div>
+
+<!-- ── Mark as Completed Modal ───────────────────────────── -->
+{% if not data.completed %}
+<div class="jf-modal-backdrop" id="completeModal">
+  <div class="jf-modal">
+    <div class="jf-modal-icon">
+      <i class="ti ti-circle-check"></i>
+    </div>
+    <div class="jf-modal-title">Mark Job as Completed?</div>
+    <div class="jf-modal-subtitle">
+      You're about to complete <strong>Job #{{ data.job_id }}</strong> for
+      <strong>{{ data.first_name }} {{ data.family_name }}</strong>.
+    </div>
+    <ul class="jf-modal-consequences list-unstyled">
+      <li><i class="ti ti-lock"></i> The job will be locked — no further edits can be made</li>
+      <li><i class="ti ti-tool"></i> Services and parts cannot be added or removed</li>
+      <li><i class="ti ti-receipt"></i> Status becomes "Completed, awaiting payment" until paid</li>
+      <li><i class="ti ti-alert-triangle" style="color:#d97706;"></i> This cannot be undone</li>
+    </ul>
+    <div class="jf-modal-actions">
+      <button type="button" class="jf-btn ghost" id="cancelCompleteModal">
+        <i class="ti ti-x"></i> Cancel
+      </button>
+      <form action="{{ url_for('technician.complete_job', job_id=data.job_id) }}" method="POST" class="d-inline">
+        <button type="submit" class="jf-btn accent lg">
+          <i class="ti ti-circle-check"></i> Yes, Mark as Completed
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+
 {% endblock %}
 
 {% block extra_js %}
 <script src="{{ url_for('static', filename='js/searchable-select.js') }}"></script>
 <script>
-/* ── Searchable selects for service and part ── */
 document.addEventListener('DOMContentLoaded', function () {
+
+  /* ── Searchable selects ─────────────────────────────── */
   const svcSel = document.getElementById('serviceSelect');
   const prtSel = document.getElementById('partSelect');
-
   if (svcSel) new SearchableSelect(svcSel, { placeholder: 'Search service…' });
   if (prtSel) new SearchableSelect(prtSel, { placeholder: 'Search part…' });
-});
 
-document.querySelectorAll('.jf-complaint-checkbox').forEach(function (cb) {
-  cb.addEventListener('change', function () {
-    const cid = this.dataset.complaintId;
-    const jid = this.dataset.jobId;
-    const row = document.getElementById('cr-' + cid);
-    const desc = row.querySelector('.jf-complaint-desc');
-    const badge = row.querySelector('.jf-badge');
+  /* ── Complaint checkbox AJAX ────────────────────────── */
+  document.querySelectorAll('.jf-complaint-checkbox').forEach(function (cb) {
+    cb.addEventListener('change', function () {
+      const cid  = this.dataset.complaintId;
+      const jid  = this.dataset.jobId;
+      const row  = document.getElementById('cr-' + cid);
+      const desc = row.querySelector('.jf-complaint-desc');
+      const badge = row.querySelector('.jf-badge');
 
-    fetch(`/technician/jobs/${jid}/complaints/${cid}/resolve`, { method: 'POST' })
-      .then(r => r.json())
-      .then(data => {
-        if (!data.ok) { cb.checked = !cb.checked; return; }
-        const resolved = cb.checked;
-        row.classList.toggle('resolved', resolved);
-        if (resolved) {
-          badge.className = 'jf-badge green';
-          badge.innerHTML = '<i class="ti ti-check"></i> Done';
-        } else {
-          badge.className = 'jf-badge orange';
-          badge.textContent = 'Open';
-        }
-      })
-      .catch(() => { cb.checked = !cb.checked; });
+      fetch(`/technician/jobs/${jid}/complaints/${cid}/resolve`, { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+          if (!data.ok) { cb.checked = !cb.checked; return; }
+          const resolved = cb.checked;
+          row.classList.toggle('resolved', resolved);
+          if (resolved) {
+            badge.className = 'jf-badge green';
+            badge.innerHTML = '<i class="ti ti-check"></i> Done';
+          } else {
+            badge.className = 'jf-badge orange';
+            badge.textContent = 'Open';
+          }
+        })
+        .catch(() => { cb.checked = !cb.checked; });
+    });
   });
+
+  /* ── Completion modal ───────────────────────────────── */
+  const openBtn   = document.getElementById('openCompleteModal');
+  const modal     = document.getElementById('completeModal');
+  const cancelBtn = document.getElementById('cancelCompleteModal');
+
+  if (openBtn && modal) {
+    openBtn.addEventListener('click', () => modal.classList.add('open'));
+    cancelBtn.addEventListener('click', () => modal.classList.remove('open'));
+    modal.addEventListener('click', e => {
+      if (e.target === modal) modal.classList.remove('open');
+    });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') modal.classList.remove('open');
+    });
+  }
+
 });
 </script>
 {% endblock %}

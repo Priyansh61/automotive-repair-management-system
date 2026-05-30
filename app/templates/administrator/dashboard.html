@@ -80,8 +80,8 @@
     <div class="row mb-4">
         <div class="col-lg-8">
             <div class="card">
-                <div class="card-header" style="background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%); color: white;">
-                    <h5 class="card-title mb-0 d-flex align-items-center gap-2" style="color: white;">
+                <div class="card-header" style="background:#1e4d8c;color:#fff;border-bottom-color:#163e72;">
+                    <h5 class="card-title mb-0 d-flex align-items-center gap-2" style="color:#fff;">
                         <i class="ti ti-chart-bar"></i>
                         Monthly Revenue
                     </h5>
@@ -93,8 +93,8 @@
         </div>
         <div class="col-lg-4">
             <div class="card">
-                <div class="card-header" style="background: var(--info); color: white;">
-                    <h5 class="card-title mb-0 d-flex align-items-center gap-2" style="color: white;">
+                <div class="card-header" style="background:#0f766e;color:#fff;border-bottom-color:#0c635c;">
+                    <h5 class="card-title mb-0 d-flex align-items-center gap-2" style="color:#fff;">
                         <i class="ti ti-chart-pie"></i>
                         Job Status
                     </h5>
@@ -110,8 +110,8 @@
     <div class="row">
         <div class="col-lg-7">
             <div class="card">
-                <div class="card-header" style="background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%); color: white;">
-                    <h5 class="card-title mb-0 d-flex align-items-center gap-2" style="color: white;">
+                <div class="card-header" style="background:#1e4d8c;color:#fff;border-bottom-color:#163e72;">
+                    <h5 class="card-title mb-0 d-flex align-items-center gap-2" style="color:#fff;">
                         <i class="ti ti-activity"></i>
                         Recent Activity
                     </h5>
@@ -126,7 +126,7 @@
                             </div>
                             <div class="flex-grow-1">
                                 <div class="fw-semibold">Job #{{ job.job_id }}</div>
-                                <small class="text-muted">{{ job.first_name }} {{ job.family_name }} &mdash; {{ job.job_date }}</small>
+                                <small class="text-muted">{{ job.first_name or '—' }} {{ job.family_name or '' }} &mdash; {{ job.job_date }}</small>
                             </div>
                             <div>
                                 {% if job.completed == 1 %}
@@ -155,8 +155,8 @@
         </div>
         <div class="col-lg-5">
             <div class="card">
-                <div class="card-header" style="background: var(--danger); color: white;">
-                    <h5 class="card-title mb-0 d-flex align-items-center gap-2" style="color: white;">
+                <div class="card-header" style="background:#b94f18;color:#fff;border-bottom-color:#9a3f12;">
+                    <h5 class="card-title mb-0 d-flex align-items-center gap-2" style="color:#fff;">
                         <i class="ti ti-alert-triangle"></i>
                         Overdue Alerts
                     </h5>
@@ -171,7 +171,7 @@
                                     <i class="ti ti-alert-circle text-danger"></i>
                                 </div>
                                 <div>
-                                    <div class="fw-semibold">{{ bill.first_name }} {{ bill.family_name }}</div>
+                                    <div class="fw-semibold">{{ bill.first_name or '—' }} {{ bill.family_name or '' }}</div>
                                     <small class="text-muted">Job #{{ bill.job_id }}</small>
                                 </div>
                             </div>

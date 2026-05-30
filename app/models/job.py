@@ -279,8 +279,8 @@ class Job(db.Model, BaseModelMixin, TenantScopedMixin):
 
     def _update_total_cost(self) -> None:
         """Recalculate and update total cost"""
-        service_total = sum(js.total_cost for js in self.job_services)
-        part_total = sum(jp.total_cost for jp in self.job_parts)
+        service_total = sum((js.total_cost for js in self.job_services), Decimal('0'))
+        part_total = sum((jp.total_cost for jp in self.job_parts), Decimal('0'))
         self.total_cost = service_total + part_total
 
     @hybrid_property
@@ -314,8 +314,7 @@ class Job(db.Model, BaseModelMixin, TenantScopedMixin):
         data['is_overdue'] = self.is_overdue
         data['status_text'] = self.status_text
         data['days_since_job'] = self.days_since_job
-        if self.total_cost:
-            data['total_cost'] = float(self.total_cost)
+        data['total_cost'] = float(self.total_cost) if self.total_cost is not None else 0.0
         if self.customer_rel:
             data['first_name'] = self.customer_rel.first_name
             data['family_name'] = self.customer_rel.family_name

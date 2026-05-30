@@ -114,9 +114,13 @@ def dashboard():
         job_stats = job_service.get_job_statistics()
         billing_stats = billing_service.get_billing_statistics()
 
-        # Get recent activities
-        recent_jobs, _, _ = job_service.get_current_jobs(page=1, per_page=10)
-        overdue_bills = billing_service.get_overdue_bills()
+        # Get recent active jobs — convert to dicts so templates get first_name/family_name
+        recent_jobs_orm, _, _ = job_service.get_current_jobs(page=1, per_page=8)
+        recent_jobs = [j.to_dict() for j in recent_jobs_orm]
+
+        # Overdue bills — ORM objects; to_dict() lazy-loads customer_rel (session is open)
+        overdue_bills_orm = billing_service.get_overdue_bills()
+        overdue_bills = [j.to_dict() for j in overdue_bills_orm]
 
         return render_template(template,
                              user_type=user_type,

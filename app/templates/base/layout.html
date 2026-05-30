@@ -33,227 +33,239 @@
     <a href="#main-content" class="visually-hidden-focusable">Skip to main content</a>
 
     <!-- Navigation Bar -->
-    <header class="navbar navbar-expand-lg navbar-dark" style="background-color: var(--tblr-primary);">
-        <div class="container-xl">
-            <!-- Brand Logo -->
-            <a class="navbar-brand d-flex align-items-center" href="{{ url_for('main.index') }}">
+    <header class="rp-navbar">
+        <div class="container-xl rp-navbar-inner">
+
+            <!-- Brand -->
+            <a class="rp-brand" href="{{ url_for('main.index') }}">
                 {% if current_tenant and current_tenant.logo_url %}
-                <img src="{{ current_tenant.logo_url }}" alt="{{ current_tenant.name }}" style="height: 30px; width: auto; margin-right: 8px; object-fit: contain;">
+                <img src="{{ current_tenant.logo_url }}" alt="{{ current_tenant.name }}" class="rp-brand-logo">
                 {% else %}
-                <img src="{{ url_for('static', filename='images/RepairOS-logo.svg') }}" alt="RepairOS" style="height: 30px; width: auto; margin-right: 8px;">
+                <img src="{{ url_for('static', filename='images/RepairOS-logo.svg') }}" alt="RepairOS" class="rp-brand-logo">
                 {% endif %}
-                <span>RepairOS{% if current_tenant %} &middot; {{ current_tenant.name }}{% endif %}</span>
+                <span class="rp-brand-name">RepairOS</span>
+                {% if current_tenant %}
+                <span class="rp-brand-tenant">{{ current_tenant.name }}</span>
+                {% endif %}
             </a>
 
-            {% if user_tenants and user_tenants|length > 1 %}
-            <!-- Organization Switcher -->
-            <div class="me-3" style="position:relative;">
-                <button class="btn btn-sm btn-outline-light d-flex align-items-center"
-                        data-nav-dropdown="orgswitcher" style="cursor:pointer;">
-                    <i class="ti ti-building me-1"></i>
-                    <span class="d-none d-md-inline">{{ current_tenant.name if current_tenant else 'Select Org' }}</span>
-                    <i class="ti ti-chevron-down ms-1" style="font-size:0.7rem;"></i>
-                </button>
-                <ul class="dropdown-menu nav-dropdown-menu" id="navDropdown-orgswitcher">
-                    <li><h6 class="dropdown-header">Organizations</h6></li>
-                    {% for tenant in user_tenants %}
-                    <li>
-                        {% if current_tenant and tenant.tenant_id == current_tenant.tenant_id %}
-                        <span class="dropdown-item d-flex align-items-center text-muted">
-                            <i class="ti ti-check me-2 text-success"></i>{{ tenant.name }}
+            <!-- Desktop nav links (hidden on mobile) -->
+            {% if session.logged_in %}
+            <nav class="rp-nav d-none d-lg-flex">
+                <a class="rp-nav-link {% if request.endpoint == 'main.dashboard' %}active{% endif %}"
+                   href="{{ url_for('main.dashboard') }}">
+                    <i class="ti ti-layout-dashboard"></i> Dashboard
+                </a>
+
+                {% if session.current_role in ('owner', 'admin') %}
+                <!-- Jobs dropdown (admin) -->
+                <div class="rp-dropdown-wrap" data-nav-dropdown="jobs">
+                    <button class="rp-nav-link rp-nav-dropdown-btn
+                        {% if request.endpoint and 'technician' in request.endpoint %}active{% endif %}">
+                        <i class="ti ti-clipboard-list"></i> Jobs
+                        <i class="ti ti-chevron-down rp-caret"></i>
+                    </button>
+                    <div class="rp-dropdown" id="navDropdown-jobs">
+                        <a class="rp-dropdown-item" href="{{ url_for('technician.current_jobs') }}">
+                            <i class="ti ti-list-check"></i>
+                            <div><strong>Current Jobs</strong><small>Active work orders</small></div>
+                        </a>
+                        <a class="rp-dropdown-item" href="{{ url_for('technician.new_job') }}">
+                            <i class="ti ti-circle-plus"></i>
+                            <div><strong>New Job</strong><small>Create a work order</small></div>
+                        </a>
+                    </div>
+                </div>
+
+                <a class="rp-nav-link {% if request.endpoint and 'administrator' in request.endpoint %}active{% endif %}"
+                   href="{{ url_for('administrator.dashboard') }}">
+                    <i class="ti ti-shield"></i> Admin
+                </a>
+
+                {% elif session.current_role in ('manager', 'technician') %}
+                <!-- Jobs dropdown (technician) -->
+                <div class="rp-dropdown-wrap" data-nav-dropdown="jobs">
+                    <button class="rp-nav-link rp-nav-dropdown-btn
+                        {% if request.endpoint and 'technician' in request.endpoint %}active{% endif %}">
+                        <i class="ti ti-clipboard-list"></i> Jobs
+                        <i class="ti ti-chevron-down rp-caret"></i>
+                    </button>
+                    <div class="rp-dropdown" id="navDropdown-jobs">
+                        <a class="rp-dropdown-item" href="{{ url_for('technician.current_jobs') }}">
+                            <i class="ti ti-list-check"></i>
+                            <div><strong>Current Jobs</strong><small>Active work orders</small></div>
+                        </a>
+                        <a class="rp-dropdown-item" href="{{ url_for('technician.new_job') }}">
+                            <i class="ti ti-circle-plus"></i>
+                            <div><strong>New Job</strong><small>Create a work order</small></div>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Catalog dropdown -->
+                <div class="rp-dropdown-wrap" data-nav-dropdown="catalog">
+                    <button class="rp-nav-link rp-nav-dropdown-btn
+                        {% if (request.endpoint and 'services' in request.endpoint) or (request.endpoint and 'parts' in request.endpoint) %}active{% endif %}">
+                        <i class="ti ti-category"></i> Catalog
+                        <i class="ti ti-chevron-down rp-caret"></i>
+                    </button>
+                    <div class="rp-dropdown" id="navDropdown-catalog">
+                        <a class="rp-dropdown-item" href="{{ url_for('technician.services') }}">
+                            <i class="ti ti-tool"></i>
+                            <div><strong>Services</strong><small>Labour & service items</small></div>
+                        </a>
+                        <a class="rp-dropdown-item" href="{{ url_for('technician.parts') }}">
+                            <i class="ti ti-package"></i>
+                            <div><strong>Parts</strong><small>Inventory & parts</small></div>
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+
+                <a class="rp-nav-link {% if request.endpoint == 'main.customers' %}active{% endif %}"
+                   href="{{ url_for('main.customers') }}">
+                    <i class="ti ti-address-book"></i> Customers
+                </a>
+            </nav>
+            {% endif %}
+
+            <!-- Right-side icons -->
+            <div class="rp-nav-right">
+                {% if session.logged_in %}
+
+                <!-- Notifications -->
+                <div class="rp-icon-btn-wrap" data-nav-dropdown="notifications">
+                    <button class="rp-icon-btn" title="Notifications">
+                        <i class="ti ti-bell"></i>
+                        {% if notification_count|default(0) > 0 %}
+                        <span class="rp-badge">{{ notification_count }}</span>
+                        {% endif %}
+                    </button>
+                    <div class="rp-dropdown rp-dropdown-end" id="navDropdown-notifications" style="min-width:280px;">
+                        <div class="rp-dropdown-header">Notifications</div>
+                        {% if overdue_bills_count|default(0) > 0 %}
+                        <a class="rp-dropdown-item" href="{% if session.current_role in ('owner', 'admin') %}{{ url_for('administrator.overdue_bills') }}{% else %}#{% endif %}">
+                            <i class="ti ti-alert-triangle" style="color:#f59e0b;"></i>
+                            <div><strong>Overdue Payments</strong><small>{{ overdue_bills_count }} bill{{ 's' if overdue_bills_count != 1 }}</small></div>
+                        </a>
+                        {% endif %}
+                        {% if unpaid_bills_count|default(0) > 0 %}
+                        <a class="rp-dropdown-item" href="{% if session.current_role in ('owner', 'admin') %}{{ url_for('administrator.pay_bills') }}{% else %}#{% endif %}">
+                            <i class="ti ti-credit-card" style="color:#06b6d4;"></i>
+                            <div><strong>Unpaid Bills</strong><small>{{ unpaid_bills_count }} awaiting payment</small></div>
+                        </a>
+                        {% endif %}
+                        {% if notification_count|default(0) == 0 %}
+                        <div style="padding:.875rem 1.125rem;font-size:.875rem;color:#94a3b8;">No new notifications</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- User avatar / menu -->
+                <div class="rp-icon-btn-wrap" data-nav-dropdown="usermenu">
+                    <button class="rp-avatar-btn">
+                        <span class="rp-avatar">{{ (session.username or session.user_id or '?')|string|first|upper }}</span>
+                        <span class="rp-avatar-label d-none d-lg-block">
+                            <span class="rp-avatar-name">{{ session.username or session.user_id }}</span>
+                            <span class="rp-avatar-role">{{ session.current_role|default('user')|title }}</span>
                         </span>
+                        <i class="ti ti-chevron-down rp-caret d-none d-lg-inline"></i>
+                    </button>
+                    <div class="rp-dropdown rp-dropdown-end" id="navDropdown-usermenu" style="min-width:210px;">
+                        <div class="rp-dropdown-header" style="padding:.75rem 1.125rem;">
+                            <div style="font-weight:700;color:#1e293b;">{{ session.username or session.user_id }}</div>
+                            <div style="font-size:.75rem;color:#94a3b8;">{{ session.current_role|default('user')|title }}{% if current_tenant %} · {{ current_tenant.name }}{% endif %}</div>
+                        </div>
+                        <a class="rp-dropdown-item" href="{{ url_for('main.dashboard') }}">
+                            <i class="ti ti-layout-dashboard"></i><div>Dashboard</div>
+                        </a>
+                        <a class="rp-dropdown-item" href="{% if session.current_role in ('owner', 'admin') %}{{ url_for('administrator.org_settings') }}{% else %}{{ url_for('main.dashboard') }}{% endif %}">
+                            <i class="ti ti-settings"></i><div>Settings</div>
+                        </a>
+                        {% if user_tenants and user_tenants|length > 1 %}
+                        <div class="rp-dropdown-divider"></div>
+                        <div class="rp-dropdown-header" style="padding:.5rem 1.125rem;">Organizations</div>
+                        {% for tenant in user_tenants %}
+                        {% if current_tenant and tenant.tenant_id == current_tenant.tenant_id %}
+                        <div class="rp-dropdown-item" style="opacity:.6;cursor:default;">
+                            <i class="ti ti-check" style="color:#059669;"></i><div>{{ tenant.name }}</div>
+                        </div>
                         {% else %}
                         <form method="post" action="{{ url_for('auth.switch_tenant') }}" style="margin:0;">
                             <input type="hidden" name="tenant_slug" value="{{ tenant.slug }}">
-                            <button type="submit" class="dropdown-item d-flex align-items-center" style="background:none;border:none;width:100%;text-align:left;">
-                                <span style="width: 14px; display: inline-block;" class="me-2"></span>
-                                {{ tenant.name }}
+                            <button type="submit" class="rp-dropdown-item" style="width:100%;background:none;border:none;text-align:left;">
+                                <i class="ti ti-building"></i><div>{{ tenant.name }}</div>
                             </button>
                         </form>
                         {% endif %}
-                    </li>
-                    {% endfor %}
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item" href="{{ url_for('auth.register_organization') }}">
-                        <i class="ti ti-plus me-2"></i>New Organization
-                    </a></li>
-                </ul>
-            </div>
-            {% endif %}
-
-            <!-- Mobile Toggle Button -->
-            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-
-            <!-- Navigation Menu -->
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    {% if session.logged_in %}
-                        <!-- Dashboard -->
-                        <li class="nav-item">
-                            <a class="nav-link {% if request.endpoint == 'main.dashboard' %}active{% endif %}" href="{{ url_for('main.dashboard') }}">
-                                <i class="ti ti-layout-dashboard me-1"></i>
-                                <span>Dashboard</span>
-                            </a>
-                        </li>
-
-                        {% if session.current_role in ('owner', 'admin') %}
-                            <!-- Admin/Owner Menu -->
-                            <li class="nav-item">
-                                <a class="nav-link {% if request.endpoint and 'administrator' in request.endpoint and 'dashboard' in request.endpoint %}active{% endif %}" href="{{ url_for('administrator.dashboard') }}">
-                                    <i class="ti ti-shield me-1"></i>
-                                    <span>Admin Panel</span>
-                                </a>
-                            </li>
-                            <!-- Also show technician tools for admin/owner -->
-                            <li class="nav-item">
-                                <a class="nav-link {% if request.endpoint and 'technician' in request.endpoint and 'current' in request.endpoint %}active{% endif %}" href="{{ url_for('technician.current_jobs') }}">
-                                    <i class="ti ti-clipboard-list me-1"></i>
-                                    <span>Current Jobs</span>
-                                </a>
-                            </li>
-                        {% elif session.current_role in ('manager', 'technician') %}
-                            <!-- Technician/Manager Menu -->
-                            <li class="nav-item">
-                                <a class="nav-link {% if request.endpoint and 'technician' in request.endpoint and 'current' in request.endpoint %}active{% endif %}" href="{{ url_for('technician.current_jobs') }}">
-                                    <i class="ti ti-clipboard-list me-1"></i>
-                                    <span>Current Jobs</span>
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link {% if request.endpoint and 'technician' in request.endpoint and 'new' in request.endpoint %}active{% endif %}" href="{{ url_for('technician.new_job') }}">
-                                    <i class="ti ti-circle-plus me-1"></i>
-                                    <span>New Job</span>
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link {% if request.endpoint and 'technician' in request.endpoint and 'services' in request.endpoint %}active{% endif %}" href="{{ url_for('technician.services') }}">
-                                    <i class="ti ti-tool me-1"></i>
-                                    <span>Services</span>
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link {% if request.endpoint and 'technician' in request.endpoint and 'parts' in request.endpoint %}active{% endif %}" href="{{ url_for('technician.parts') }}">
-                                    <i class="ti ti-package me-1"></i>
-                                    <span>Parts</span>
-                                </a>
-                            </li>
+                        {% endfor %}
                         {% endif %}
+                        <div class="rp-dropdown-divider"></div>
+                        <a class="rp-dropdown-item" href="{{ url_for('auth.register_organization') }}">
+                            <i class="ti ti-plus"></i><div>New Organization</div>
+                        </a>
+                        <div class="rp-dropdown-divider"></div>
+                        <a class="rp-dropdown-item" href="{{ url_for('main.logout') }}" style="color:#dc2626;">
+                            <i class="ti ti-logout"></i><div>Sign Out</div>
+                        </a>
+                    </div>
+                </div>
 
-                        <!-- Common Menu Items -->
-                        <li class="nav-item">
-                            <a class="nav-link {% if request.endpoint == 'main.customers' %}active{% endif %}" href="{{ url_for('main.customers') }}">
-                                <i class="ti ti-address-book me-1"></i>
-                                <span>All Customers</span>
-                            </a>
-                        </li>
-                    {% endif %}
-                </ul>
+                <!-- Hamburger (mobile only) -->
+                <button class="rp-hamburger d-lg-none" id="rpHamburger" aria-label="Toggle menu">
+                    <span></span><span></span><span></span>
+                </button>
 
-                <!-- Right Side Menu -->
-                <ul class="navbar-nav">
-                    {% if session.logged_in %}
-                        <!-- Search -->
-                        <li class="nav-item me-3">
-                            <div style="position: relative;">
-                                <input type="text" class="form-control form-control-sm" placeholder="Search customers..." id="globalSearch" autocomplete="off" style="min-width: 180px;">
-                                <div class="search-results-dropdown" id="searchResultsDropdown"></div>
-                            </div>
-                        </li>
-
-                        <!-- Notifications -->
-                        <li class="nav-item me-3" style="position:relative;">
-                            <a class="nav-link position-relative" href="#" role="button"
-                               data-nav-dropdown="notifications" style="cursor:pointer;">
-                                <i class="ti ti-bell"></i>
-                                {% if notification_count|default(0) > 0 %}
-                                <span class="badge bg-danger badge-notification">{{ notification_count }}</span>
-                                {% endif %}
-                            </a>
-                            <ul class="dropdown-menu dropdown-menu-end nav-dropdown-menu" id="navDropdown-notifications">
-                                <li><h6 class="dropdown-header">Notifications</h6></li>
-                                {% if overdue_bills_count|default(0) > 0 %}
-                                <li><a class="dropdown-item" href="{% if session.current_role in ('owner', 'admin') %}{{ url_for('administrator.overdue_bills') }}{% else %}#{% endif %}">
-                                    <div class="d-flex">
-                                        <i class="ti ti-alert-triangle text-warning me-2"></i>
-                                        <div>
-                                            <div class="fw-semibold">Overdue Payments</div>
-                                            <small class="text-secondary">{{ overdue_bills_count }} bill{{ 's' if overdue_bills_count != 1 }} overdue</small>
-                                        </div>
-                                    </div>
-                                </a></li>
-                                {% endif %}
-                                {% if unpaid_bills_count|default(0) > 0 %}
-                                <li><a class="dropdown-item" href="{% if session.current_role in ('owner', 'admin') %}{{ url_for('administrator.pay_bills') }}{% else %}#{% endif %}">
-                                    <div class="d-flex">
-                                        <i class="ti ti-credit-card text-info me-2"></i>
-                                        <div>
-                                            <div class="fw-semibold">Unpaid Bills</div>
-                                            <small class="text-secondary">{{ unpaid_bills_count }} bill{{ 's' if unpaid_bills_count != 1 }} awaiting payment</small>
-                                        </div>
-                                    </div>
-                                </a></li>
-                                {% endif %}
-                                {% if notification_count|default(0) == 0 %}
-                                <li><span class="dropdown-item text-secondary">No new notifications</span></li>
-                                {% endif %}
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item text-center" href="{{ url_for('main.dashboard') }}">View dashboard</a></li>
-                            </ul>
-                        </li>
-
-                        <!-- User Menu -->
-                        <li class="nav-item" style="position:relative;">
-                            <a class="nav-link d-flex align-items-center" href="#" role="button"
-                               data-nav-dropdown="usermenu" style="cursor:pointer;">
-                                <span class="avatar avatar-sm bg-white text-dark me-2" style="font-weight:700;font-size:0.8rem;">
-                                    {{ (session.username or session.user_id or '?')|string|first|upper }}
-                                </span>
-                                <div class="d-none d-md-block lh-sm">
-                                    <div class="fw-semibold">{{ session.username or session.user_id }}</div>
-                                    <small class="text-white-50">{{ session.current_role|default('user')|title }}</small>
-                                </div>
-                                <i class="ti ti-chevron-down ms-1" style="font-size:0.75rem;"></i>
-                            </a>
-                            <ul class="dropdown-menu dropdown-menu-end nav-dropdown-menu" id="navDropdown-usermenu" style="min-width:190px;">
-                                <li><a class="dropdown-item" href="{{ url_for('main.dashboard') }}">
-                                    <i class="ti ti-layout-dashboard me-2"></i>Dashboard
-                                </a></li>
-                                <li><a class="dropdown-item" href="{% if session.current_role in ('owner', 'admin') %}{{ url_for('administrator.org_settings') }}{% else %}{{ url_for('main.dashboard') }}{% endif %}">
-                                    <i class="ti ti-settings me-2"></i>Settings
-                                </a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                {% if user_tenants and user_tenants|length > 1 %}
-                                <li>
-                                    <a class="dropdown-item" href="{{ url_for('auth.select_tenant') }}">
-                                        <i class="ti ti-switch-horizontal me-2"></i>Switch Organization
-                                    </a>
-                                </li>
-                                {% endif %}
-                                <li>
-                                    <a class="dropdown-item" href="{{ url_for('auth.register_organization') }}">
-                                        <i class="ti ti-plus me-2"></i>New Organization
-                                    </a>
-                                </li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item text-danger fw-semibold" href="{{ url_for('main.logout') }}">
-                                    <i class="ti ti-logout me-2"></i>Sign Out
-                                </a></li>
-                            </ul>
-                        </li>
-                    {% else %}
-                        <!-- Login Button -->
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('auth.login') }}">
-                                <i class="ti ti-login me-1"></i>
-                                <span>Sign In</span>
-                            </a>
-                        </li>
-                    {% endif %}
-                </ul>
+                {% else %}
+                <a class="rp-nav-link" href="{{ url_for('auth.login') }}">
+                    <i class="ti ti-login"></i> Sign In
+                </a>
+                {% endif %}
             </div>
         </div>
+
+        <!-- Mobile drawer -->
+        {% if session.logged_in %}
+        <div class="rp-mobile-menu" id="rpMobileMenu">
+            <nav class="rp-mobile-nav">
+                <a class="rp-mobile-link {% if request.endpoint == 'main.dashboard' %}active{% endif %}"
+                   href="{{ url_for('main.dashboard') }}">
+                    <i class="ti ti-layout-dashboard"></i> Dashboard
+                </a>
+                <a class="rp-mobile-link {% if request.endpoint and 'technician' in request.endpoint and 'current' in request.endpoint %}active{% endif %}"
+                   href="{{ url_for('technician.current_jobs') }}">
+                    <i class="ti ti-list-check"></i> Current Jobs
+                </a>
+                <a class="rp-mobile-link {% if request.endpoint and 'new' in request.endpoint %}active{% endif %}"
+                   href="{{ url_for('technician.new_job') }}">
+                    <i class="ti ti-circle-plus"></i> New Job
+                </a>
+                {% if session.current_role in ('owner', 'admin') %}
+                <a class="rp-mobile-link {% if request.endpoint and 'administrator' in request.endpoint %}active{% endif %}"
+                   href="{{ url_for('administrator.dashboard') }}">
+                    <i class="ti ti-shield"></i> Admin Panel
+                </a>
+                {% else %}
+                <a class="rp-mobile-link {% if request.endpoint and 'services' in request.endpoint %}active{% endif %}"
+                   href="{{ url_for('technician.services') }}">
+                    <i class="ti ti-tool"></i> Services
+                </a>
+                <a class="rp-mobile-link {% if request.endpoint and 'parts' in request.endpoint %}active{% endif %}"
+                   href="{{ url_for('technician.parts') }}">
+                    <i class="ti ti-package"></i> Parts
+                </a>
+                {% endif %}
+                <a class="rp-mobile-link {% if request.endpoint == 'main.customers' %}active{% endif %}"
+                   href="{{ url_for('main.customers') }}">
+                    <i class="ti ti-address-book"></i> Customers
+                </a>
+                <div class="rp-mobile-divider"></div>
+                <a class="rp-mobile-link" href="{{ url_for('main.logout') }}" style="color:#dc2626;">
+                    <i class="ti ti-logout"></i> Sign Out
+                </a>
+            </nav>
+        </div>
+        {% endif %}
     </header>
 
     <!-- Main Content Area -->
@@ -328,31 +340,62 @@
     </footer>
 
     <!-- JavaScript Libraries -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Tabler already bundles Bootstrap — load only once to avoid double-initialisation -->
     <script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.4.0/dist/js/tabler.min.js"></script>
-    <!-- Navbar dropdown toggle (plain JS — no Bootstrap dependency) -->
+    <!-- Navbar interactions (pure vanilla JS, no Bootstrap dependency) -->
     <script>
     (function () {
-        function closeAll() {
-            document.querySelectorAll('.nav-dropdown-menu.show').forEach(function (m) {
-                m.classList.remove('show');
-            });
-        }
-        document.addEventListener('DOMContentLoaded', function () {
-            document.querySelectorAll('[data-nav-dropdown]').forEach(function (toggle) {
-                toggle.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    var menuId = 'navDropdown-' + toggle.getAttribute('data-nav-dropdown');
-                    var menu = document.getElementById(menuId);
-                    if (!menu) return;
-                    var isOpen = menu.classList.contains('show');
-                    closeAll();
-                    if (!isOpen) menu.classList.add('show');
-                });
-            });
-            document.addEventListener('click', closeAll);
+      function closeAllDropdowns() {
+        document.querySelectorAll('.rp-dropdown.open').forEach(function (d) { d.classList.remove('open'); });
+      }
+
+      document.addEventListener('DOMContentLoaded', function () {
+        /* ── Dropdowns ── */
+        document.querySelectorAll('[data-nav-dropdown]').forEach(function (wrap) {
+          var key  = wrap.getAttribute('data-nav-dropdown');
+          var menu = document.getElementById('navDropdown-' + key);
+          if (!menu) return;
+
+          /* The trigger is the first button/a inside the wrap */
+          var trigger = wrap.querySelector('button, a');
+          if (!trigger) return;
+
+          trigger.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var isOpen = menu.classList.contains('open');
+            closeAllDropdowns();
+            if (!isOpen) menu.classList.add('open');
+          });
         });
+
+        document.addEventListener('click', closeAllDropdowns);
+
+        /* ── Hamburger ── */
+        var ham   = document.getElementById('rpHamburger');
+        var drawer = document.getElementById('rpMobileMenu');
+        if (ham && drawer) {
+          ham.addEventListener('click', function (e) {
+            e.stopPropagation();
+            var open = drawer.classList.toggle('open');
+            ham.classList.toggle('open', open);
+          });
+          /* Close drawer when a link inside is clicked */
+          drawer.querySelectorAll('a').forEach(function (a) {
+            a.addEventListener('click', function () {
+              drawer.classList.remove('open');
+              ham.classList.remove('open');
+            });
+          });
+          /* Close drawer on outside click */
+          document.addEventListener('click', function (e) {
+            if (!ham.contains(e.target) && !drawer.contains(e.target)) {
+              drawer.classList.remove('open');
+              ham.classList.remove('open');
+            }
+          });
+        }
+      });
     })();
     </script>
 
