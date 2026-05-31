@@ -4,6 +4,7 @@ Business logic for work order operations using SQLAlchemy ORM
 """
 from typing import List, Optional, Dict, Any, Tuple
 from datetime import date
+from decimal import Decimal, InvalidOperation
 import logging
 from flask import g
 from app.extensions import db
@@ -23,26 +24,29 @@ class JobService:
         """Get current tenant ID from Flask g context"""
         return getattr(g, 'current_tenant_id', None)
 
-    def get_current_jobs(self, page: int = 1, per_page: int = 10) -> Tuple[List[Job], int, int]:
-        """
-        Get current incomplete jobs with pagination
-
-        Args:
-            page: Page number
-            per_page: Records per page
-
-        Returns:
-            (jobs_list, total_count, total_pages)
-        """
+    def get_current_jobs(
+        self,
+        page: int = 1,
+        per_page: int = 10,
+        tab: str = 'current',
+    ) -> Tuple[List[Job], int, int]:
+        """Get jobs filtered by list-page tab with pagination."""
         try:
-            jobs, total = Job.get_current_jobs(page, per_page)
+            jobs, total = Job.get_current_jobs(page, per_page, tab=tab)
             total_pages = (total + per_page - 1) // per_page
-
             return jobs, total, total_pages
 
         except Exception as e:
             self.logger.error(f"Failed to get current jobs: {e}")
             raise
+
+    def get_tab_counts(self) -> Dict[str, int]:
+        """Counts per jobs-list tab for badges."""
+        try:
+            return Job.get_tab_counts()
+        except Exception as e:
+            self.logger.error(f"Failed to get tab counts: {e}")
+            return {'current': 0, 'estimates': 0, 'completed': 0}
 
     def get_job_by_id(self, job_id: int) -> Optional[Job]:
         """Get job by ID"""
@@ -263,8 +267,12 @@ class JobService:
         vehicle_id: int = None,
         odometer_in: int = None,
         complaints: List[str] = None,
+        is_estimate: bool = False,
+        estimate_approved: bool = False,
+        contingency_amount: Optional[Decimal] = None,
+        contingency_note: Optional[str] = None,
     ) -> Tuple[bool, List[str], Optional[Job]]:
-        """Create a new job with optional vehicle, odometer, and complaints"""
+        """Create a new job with optional vehicle, odometer, complaints, estimate flags."""
         try:
             if job_date < date.today():
                 return False, ["Job date cannot be earlier than today"], None
@@ -278,6 +286,10 @@ class JobService:
                 total_cost=0.0,
                 completed=False,
                 paid=False,
+                is_estimate=is_estimate,
+                estimate_approved=estimate_approved if is_estimate else False,
+                contingency_amount=contingency_amount or Decimal('0'),
+                contingency_note=contingency_note,
             )
             db.session.add(job)
             db.session.flush()  # get job_id before adding complaints
@@ -299,6 +311,26 @@ class JobService:
             self.logger.error(f"Failed to create job: {e}")
             db.session.rollback()
             return False, ["System error, please try again"], None
+
+    def approve_estimate(self, job_id: int) -> Tuple[bool, List[str]]:
+        """Mark an estimate as approved by the customer."""
+        try:
+            job = self.get_job_by_id(job_id)
+            if not job:
+                return False, ["Job does not exist"]
+            if not job.is_estimate:
+                return False, ["This job is not an estimate"]
+            if job.estimate_approved:
+                return False, ["Estimate is already approved"]
+
+            job.estimate_approved = True
+            db.session.commit()
+            self.logger.info(f"Approved estimate for job {job_id}")
+            return True, []
+        except Exception as e:
+            self.logger.error(f"Failed to approve estimate {job_id}: {e}")
+            db.session.rollback()
+            return False, ["System error, please try again"]
 
     def delete_job(self, job_id: int) -> Tuple[bool, List[str]]:
         """

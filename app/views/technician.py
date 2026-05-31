@@ -42,16 +42,23 @@ def current_jobs(page=1, per_page=10):
     if redirect_response:
         return redirect_response
 
+    tab = (request.args.get('tab') or 'current').strip().lower()
+    if tab not in ('current', 'estimates', 'completed'):
+        tab = 'current'
+
     try:
-        jobs, total, total_pages = job_service.get_current_jobs(page, per_page)
+        jobs, total, total_pages = job_service.get_current_jobs(page, per_page, tab=tab)
         job_dicts = [j.to_dict() for j in jobs]
+        tab_counts = job_service.get_tab_counts()
 
         return render_template('technician/current_jobs.html',
                              data=job_dicts,
                              page=page,
                              per_page=per_page,
                              total=total,
-                             total_pages=total_pages)
+                             total_pages=total_pages,
+                             tab=tab,
+                             tab_counts=tab_counts)
 
     except Exception as e:
         logger.error(f"Failed to get current work orders: {e}")
@@ -61,7 +68,9 @@ def current_jobs(page=1, per_page=10):
                              page=1,
                              per_page=per_page,
                              total=0,
-                             total_pages=0)
+                             total_pages=0,
+                             tab=tab,
+                             tab_counts={'current': 0, 'estimates': 0, 'completed': 0})
 
 
 @technician_bp.route('/jobs/<int:job_id>')
@@ -200,6 +209,28 @@ def add_part_to_job(job_id):
         return redirect(url_for('technician.modify_job', job_id=job_id))
 
 
+@technician_bp.route('/jobs/<int:job_id>/approve-estimate', methods=['POST'])
+@handle_database_errors
+def approve_estimate(job_id):
+    """Approve a pending estimate and start the job."""
+    redirect_response = require_technician_login()
+    if redirect_response:
+        return redirect_response
+
+    try:
+        success, errors = job_service.approve_estimate(job_id)
+        if success:
+            flash('Estimate approved. Job is ready to start.', 'success')
+        else:
+            for error in errors:
+                flash(error, 'error')
+        return redirect(url_for('technician.modify_job', job_id=job_id))
+    except Exception as e:
+        logger.error(f"Failed to approve estimate {job_id}: {e}")
+        flash('Failed to approve estimate, please try again later', 'error')
+        return redirect(url_for('technician.modify_job', job_id=job_id))
+
+
 @technician_bp.route('/jobs/<int:job_id>/complete', methods=['POST'])
 @handle_database_errors
 def complete_job(job_id):
@@ -312,6 +343,27 @@ def create_job():
         # --- Complaints ---
         complaints = [c for c in request.form.getlist('complaints[]') if c.strip()]
 
+        # --- Estimate workflow ---
+        # save_mode: 'job' (default, behaves as today), 'estimate' (draft estimate),
+        # 'approve' (estimate created and immediately approved).
+        save_mode = (request.form.get('save_mode') or 'job').strip().lower()
+        is_estimate = save_mode in ('estimate', 'approve')
+        estimate_approved = save_mode == 'approve'
+
+        contingency_amount = None
+        contingency_note = None
+        if is_estimate:
+            from decimal import Decimal, InvalidOperation
+            raw_amount = (request.form.get('contingency_amount') or '').strip()
+            if raw_amount:
+                try:
+                    contingency_amount = Decimal(raw_amount)
+                    if contingency_amount < 0:
+                        return _render_new(['Contingency amount cannot be negative'])
+                except (InvalidOperation, ValueError):
+                    return _render_new(['Contingency amount must be a number'])
+            contingency_note = sanitize_input(request.form.get('contingency_note', '')) or None
+
         success, errors, job = job_service.create_job(
             customer_id=customer_id,
             job_date=job_date,
@@ -319,10 +371,19 @@ def create_job():
             vehicle_id=vehicle_id,
             odometer_in=odometer_in,
             complaints=complaints,
+            is_estimate=is_estimate,
+            estimate_approved=estimate_approved,
+            contingency_amount=contingency_amount,
+            contingency_note=contingency_note,
         )
 
         if success:
-            flash('Work order created successfully!', 'success')
+            if save_mode == 'estimate':
+                flash('Estimate saved. Share it with the customer for approval.', 'success')
+            elif save_mode == 'approve':
+                flash('Estimate approved and job started.', 'success')
+            else:
+                flash('Work order created successfully!', 'success')
             return redirect(url_for('technician.modify_job', job_id=job.job_id))
         else:
             return _render_new(errors)

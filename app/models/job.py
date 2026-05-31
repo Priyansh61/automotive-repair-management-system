@@ -87,6 +87,14 @@ class Job(db.Model, BaseModelMixin, TenantScopedMixin):
         Integer, ForeignKey('user.user_id'), nullable=True
     )
 
+    # Estimate / quote workflow — every job can optionally start as an estimate
+    is_estimate: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    estimate_approved: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    contingency_amount: Mapped[Decimal] = mapped_column(
+        Numeric(12, 2), default=Decimal('0'), nullable=False
+    )
+    contingency_note: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
     # Relationships
     customer_rel: Mapped["Customer"] = relationship("Customer", back_populates="jobs")
     vehicle_rel: Mapped[Optional["Vehicle"]] = relationship("Vehicle", back_populates="jobs")
@@ -97,11 +105,26 @@ class Job(db.Model, BaseModelMixin, TenantScopedMixin):
     tenant: Mapped[Optional["Tenant"]] = relationship("Tenant", backref="jobs")
 
     @classmethod
-    def get_current_jobs(cls, page: int = 1, per_page: int = 10) -> Tuple[List['Job'], int]:
-        """Get current incomplete jobs with pagination, scoped to tenant"""
+    def get_current_jobs(
+        cls,
+        page: int = 1,
+        per_page: int = 10,
+        tab: str = 'current',
+    ) -> Tuple[List['Job'], int]:
+        """Get jobs for a list-page tab (current / estimates / completed), tenant-scoped."""
         from app.models.customer import Customer
 
-        base_filter = [cls.completed == False]
+        base_filter = []
+        if tab == 'estimates':
+            base_filter.append(cls.is_estimate == True)
+            base_filter.append(cls.estimate_approved == False)
+        elif tab == 'completed':
+            base_filter.append(cls.completed == True)
+        else:  # 'current'
+            base_filter.append(cls.completed == False)
+            # Hide pending estimates from the active-jobs tab so they have their own bucket.
+            base_filter.append(db.or_(cls.is_estimate == False, cls.estimate_approved == True))
+
         tenant_id = cls._get_current_tenant_id()
         if tenant_id:
             base_filter.append(cls.tenant_id == tenant_id)
@@ -126,6 +149,31 @@ class Job(db.Model, BaseModelMixin, TenantScopedMixin):
         return jobs, total
 
     @classmethod
+    def get_tab_counts(cls) -> dict:
+        """Per-tab totals for badges on the jobs list page (tenant-scoped)."""
+        tenant_id = cls._get_current_tenant_id()
+        tenant_filter = [cls.tenant_id == tenant_id] if tenant_id else []
+
+        def _count(extra):
+            return db.session.execute(
+                db.select(db.func.count())
+                .select_from(cls)
+                .where(and_(*tenant_filter, *extra))
+            ).scalar() or 0
+
+        return {
+            'current': _count([
+                cls.completed == False,
+                db.or_(cls.is_estimate == False, cls.estimate_approved == True),
+            ]),
+            'estimates': _count([
+                cls.is_estimate == True,
+                cls.estimate_approved == False,
+            ]),
+            'completed': _count([cls.completed == True]),
+        }
+
+    @classmethod
     def get_all_with_customer_info(cls) -> List['Job']:
         """Get all jobs with customer information loaded, scoped to tenant"""
         from app.models.customer import Customer
@@ -138,10 +186,13 @@ class Job(db.Model, BaseModelMixin, TenantScopedMixin):
 
     @classmethod
     def get_unpaid_jobs(cls, customer_name: Optional[str] = None) -> List['Job']:
-        """Get unpaid jobs, optionally filtered by customer name"""
+        """Get unpaid jobs, optionally filtered by customer name. Excludes pending estimates."""
         from app.models.customer import Customer
 
-        filters = [cls.paid == False]
+        filters = [
+            cls.paid == False,
+            db.or_(cls.is_estimate == False, cls.estimate_approved == True),
+        ]
         tenant_id = cls._get_current_tenant_id()
         if tenant_id:
             filters.append(cls.tenant_id == tenant_id)
@@ -164,7 +215,11 @@ class Job(db.Model, BaseModelMixin, TenantScopedMixin):
         import datetime as dt
 
         threshold_date = date.today() - dt.timedelta(days=days_threshold)
-        filters = [cls.paid == False, cls.job_date < threshold_date]
+        filters = [
+            cls.paid == False,
+            cls.job_date < threshold_date,
+            db.or_(cls.is_estimate == False, cls.estimate_approved == True),
+        ]
         tenant_id = cls._get_current_tenant_id()
         if tenant_id:
             filters.append(cls.tenant_id == tenant_id)
@@ -285,15 +340,36 @@ class Job(db.Model, BaseModelMixin, TenantScopedMixin):
 
     @hybrid_property
     def is_overdue(self) -> bool:
-        """Check if job is overdue (14 days threshold)"""
+        """Check if job is overdue (14 days threshold). Pending estimates never count."""
         if self.paid or not self.job_date:
+            return False
+        if self.is_estimate and not self.estimate_approved:
             return False
         days_diff = (date.today() - self.job_date).days
         return days_diff > 14
 
     @property
+    def estimated_min(self) -> Decimal:
+        """Estimate low end — sum of services + parts at current quantities."""
+        service_total = sum((js.total_cost for js in self.job_services), Decimal('0'))
+        part_total = sum((jp.total_cost for jp in self.job_parts), Decimal('0'))
+        return service_total + part_total
+
+    @property
+    def estimated_max(self) -> Decimal:
+        """Estimate high end — minimum plus the contingency buffer."""
+        return self.estimated_min + (self.contingency_amount or Decimal('0'))
+
+    @property
+    def is_pending_estimate(self) -> bool:
+        """True when this job is an estimate awaiting customer approval."""
+        return bool(self.is_estimate) and not bool(self.estimate_approved)
+
+    @property
     def status_text(self) -> str:
         """Get status text"""
+        if self.is_pending_estimate:
+            return "Estimate - Pending Approval"
         if self.completed and self.paid:
             return "Completed & Paid"
         elif self.completed:
@@ -315,6 +391,10 @@ class Job(db.Model, BaseModelMixin, TenantScopedMixin):
         data['status_text'] = self.status_text
         data['days_since_job'] = self.days_since_job
         data['total_cost'] = float(self.total_cost) if self.total_cost is not None else 0.0
+        data['estimated_min'] = float(self.estimated_min)
+        data['estimated_max'] = float(self.estimated_max)
+        data['contingency_amount'] = float(self.contingency_amount or 0)
+        data['is_pending_estimate'] = self.is_pending_estimate
         if self.customer_rel:
             data['first_name'] = self.customer_rel.first_name
             data['family_name'] = self.customer_rel.family_name

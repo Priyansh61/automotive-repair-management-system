@@ -264,6 +264,31 @@
       </div>
     </div>
 
+    <!-- Estimate / pricing buffer -->
+    <div class="jf-card mt-3">
+      <div class="jf-card-header blue">
+        <div class="header-icon"><i class="ti ti-currency-rupee"></i></div>
+        Estimate Buffer <span class="text-muted" style="font-size:.75rem;font-weight:500;margin-left:.5rem;">optional</span>
+      </div>
+      <div class="jf-card-body">
+        <p class="text-muted" style="font-size:.8125rem;margin-bottom:1rem;">
+          Add a contingency amount in case the work expands once you start. The customer approves the upper bound; the final invoice shows the variance.
+        </p>
+        <div class="row g-3">
+          <div class="col-sm-5">
+            <label class="jf-label"><i class="ti ti-plus me-1"></i>Contingency Amount</label>
+            <input type="number" class="jf-input" name="contingency_amount" id="contingencyAmount"
+                   min="0" step="0.01" placeholder="0.00">
+          </div>
+          <div class="col-sm-7">
+            <label class="jf-label"><i class="ti ti-note me-1"></i>What it covers (optional)</label>
+            <input type="text" class="jf-input" name="contingency_note" maxlength="300"
+                   placeholder="e.g. additional brake parts if rotors are warped">
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Summary preview strip -->
     <div class="jf-card mt-3 jf-animate d1" id="summaryStrip">
       <div class="jf-card-body" style="padding:1rem 1.5rem;">
@@ -284,13 +309,20 @@
       </div>
     </div>
 
+    <input type="hidden" name="save_mode" id="saveMode" value="approve">
+
     <div class="jf-step-nav">
       <button type="button" class="jf-btn ghost" id="step3Back">
         <i class="ti ti-arrow-left"></i> Back
       </button>
-      <button type="submit" class="jf-btn accent lg">
-        <i class="ti ti-circle-plus"></i> Create Job
-      </button>
+      <div class="d-flex gap-2 flex-wrap" style="margin-left:auto;">
+        <button type="submit" class="jf-btn ghost lg" data-save-mode="estimate">
+          <i class="ti ti-file-text"></i> Save as Estimate
+        </button>
+        <button type="submit" class="jf-btn accent lg" data-save-mode="approve">
+          <i class="ti ti-circle-check"></i> Save &amp; Approve &rarr; Start Job
+        </button>
+      </div>
     </div>
   </div>
 
@@ -358,6 +390,14 @@ document.addEventListener('DOMContentLoaded', function () {
   document.getElementById('step2Back').addEventListener('click', () => goToStep(1));
   document.getElementById('step2Next').addEventListener('click', () => { if (validateStep2()) goToStep(3); });
   document.getElementById('step3Back').addEventListener('click', () => goToStep(2));
+
+  /* ── save-mode handoff: which submit button decides estimate vs approve ── */
+  const saveModeInput = document.getElementById('saveMode');
+  document.querySelectorAll('button[type="submit"][data-save-mode]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      saveModeInput.value = btn.dataset.saveMode;
+    });
+  });
 
   /* default date */
   const dateInput = document.getElementById('job_date');

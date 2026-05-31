@@ -22,6 +22,8 @@
         {{ data.first_name }} {{ data.family_name }}
         {% if data.completed %}
           <span class="jf-badge green" style="font-size:.75rem;"><i class="ti ti-circle-check"></i> Completed</span>
+        {% elif data.is_pending_estimate %}
+          <span class="jf-badge orange" style="font-size:.75rem;"><i class="ti ti-file-text"></i> Estimate</span>
         {% else %}
           <span class="jf-badge orange" style="font-size:.75rem;"><i class="ti ti-clock"></i> In Progress</span>
         {% endif %}
@@ -57,6 +59,33 @@
   <div class="alert alert-success d-flex align-items-center gap-2 mb-3 jf-animate d1" role="alert">
     <i class="ti ti-lock fs-5"></i>
     <strong>Job Locked</strong> — This job is completed. All fields are read-only.
+  </div>
+  {% endif %}
+
+  {% if data.is_pending_estimate %}
+  <div class="jf-card mb-3 jf-animate d1"
+       style="border-left:4px solid var(--jf-orange);background:linear-gradient(to right, var(--jf-orange-dim), #fff);">
+    <div class="jf-card-body d-flex align-items-center gap-3 flex-wrap" style="padding:1rem 1.25rem;">
+      <div style="width:42px;height:42px;border-radius:10px;background:var(--jf-orange-dim);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <i class="ti ti-file-text" style="color:var(--jf-orange);font-size:1.25rem;"></i>
+      </div>
+      <div class="flex-grow-1" style="min-width:240px;">
+        <div style="font-weight:700;color:#1e293b;">Estimate Pending Approval</div>
+        <div style="font-size:.8125rem;color:#64748b;">
+          Customer approves the upper bound
+          {% if data.estimated_max %}
+          (<strong>{{ currency_symbol }}{{ "%.2f"|format(data.estimated_min) }}</strong>
+          – <strong>{{ currency_symbol }}{{ "%.2f"|format(data.estimated_max) }}</strong>)
+          {% endif %}
+          before work begins.
+        </div>
+      </div>
+      <form method="POST" action="{{ url_for('technician.approve_estimate', job_id=data.job_id) }}" style="margin:0;">
+        <button type="submit" class="jf-btn accent">
+          <i class="ti ti-circle-check"></i> Approve &amp; Start Job
+        </button>
+      </form>
+    </div>
   </div>
   {% endif %}
 

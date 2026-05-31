@@ -13,18 +13,51 @@
 {% block content %}
 <div class="jf-page">
 
+  {% set tab_labels = {'current': 'Current Jobs', 'estimates': 'Estimates', 'completed': 'Completed'} %}
+  {% set tab_icons = {'current': 'ti-clipboard-list', 'estimates': 'ti-file-text', 'completed': 'ti-checks'} %}
+  {% set tab_blurbs = {
+    'current': 'Active work orders — in progress',
+    'estimates': 'Quotes awaiting customer approval',
+    'completed': 'Completed work orders',
+  } %}
+
   <!-- ── Header ──────────────────────────────────────────── -->
   <div class="d-flex justify-content-between align-items-center mb-4 jf-animate d1">
     <div>
       <h1 class="h4 fw-bold mb-0" style="color:#1e293b;">
-        <i class="ti ti-clipboard-list me-2" style="color:var(--jf-blue);"></i>Current Jobs
+        <i class="ti {{ tab_icons[tab] }} me-2" style="color:var(--jf-blue);"></i>{{ tab_labels[tab] }}
       </h1>
-      <p class="text-muted small mb-0">Active work orders — in progress</p>
+      <p class="text-muted small mb-0">{{ tab_blurbs[tab] }}</p>
     </div>
     <div class="d-flex gap-2">
       <a href="{{ url_for('technician.new_job') }}" class="jf-btn accent">
         <i class="ti ti-plus"></i> New Job
       </a>
+    </div>
+  </div>
+
+  <!-- ── Tabs ────────────────────────────────────────────── -->
+  <div class="jf-card mb-3 jf-animate d1" style="padding:0;overflow:hidden;">
+    <div class="d-flex" style="border-bottom:1px solid #e2e8f0;">
+      {% for key, label in [('current', 'Current Jobs'), ('estimates', 'Estimates'), ('completed', 'Completed')] %}
+      {% set active = tab == key %}
+      <a href="{{ url_for('technician.current_jobs', tab=key) }}"
+         class="flex-grow-1 text-center text-decoration-none"
+         style="padding:.875rem 1rem;font-size:.875rem;font-weight:600;
+                color:{{ '#1e293b' if active else '#64748b' }};
+                background:{{ '#fff' if active else 'transparent' }};
+                border-bottom:3px solid {{ 'var(--jf-orange)' if active else 'transparent' }};
+                transition:all .15s ease;">
+        <i class="ti {{ tab_icons[key] }} me-1"></i>{{ label }}
+        {% set count = tab_counts.get(key, 0) %}
+        {% if count %}
+        <span style="display:inline-block;margin-left:.375rem;padding:.125rem .5rem;border-radius:999px;
+                     font-size:.6875rem;font-weight:700;
+                     background:{{ 'var(--jf-orange-dim)' if active else '#f1f5f9' }};
+                     color:{{ 'var(--jf-orange)' if active else '#64748b' }};">{{ count }}</span>
+        {% endif %}
+      </a>
+      {% endfor %}
     </div>
   </div>
 
@@ -204,23 +237,29 @@
 
     {% else %}
     <!-- Empty state -->
+    {% set empty_titles = {'current': 'No Active Jobs', 'estimates': 'No Pending Estimates', 'completed': 'No Completed Jobs Yet'} %}
+    {% set empty_blurbs = {
+      'current': 'There are no active work orders right now. Create a new job to get started.',
+      'estimates': 'There are no estimates waiting on customer approval right now.',
+      'completed': 'Completed jobs will appear here once work orders are marked as done.',
+    } %}
     <div style="padding:3.5rem 1.5rem;text-align:center;">
       <div style="width:64px;height:64px;border-radius:50%;background:var(--jf-blue-light);display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;">
-        <i class="ti ti-clipboard-list" style="font-size:1.75rem;color:var(--jf-blue);"></i>
+        <i class="ti {{ tab_icons[tab] }}" style="font-size:1.75rem;color:var(--jf-blue);"></i>
       </div>
       <div style="font-size:1.125rem;font-weight:700;color:#1e293b;margin-bottom:.5rem;">
-        {% if page > 1 %}No jobs on this page{% else %}No Active Jobs{% endif %}
+        {% if page > 1 %}No jobs on this page{% else %}{{ empty_titles[tab] }}{% endif %}
       </div>
       <p class="text-muted" style="font-size:.9rem;max-width:340px;margin:0 auto 1.5rem;">
         {% if page > 1 %}
           You've gone past the last page of results.
         {% else %}
-          There are no active work orders right now. Create a new job to get started.
+          {{ empty_blurbs[tab] }}
         {% endif %}
       </p>
       <div class="d-flex gap-2 justify-content-center flex-wrap">
         {% if page > 1 %}
-        <a href="{{ url_for('technician.current_jobs', page=1) }}" class="jf-btn ghost">
+        <a href="{{ url_for('technician.current_jobs', tab=tab, page=1) }}" class="jf-btn ghost">
           <i class="ti ti-arrow-left"></i> Back to Page 1
         </a>
         {% endif %}
@@ -239,7 +278,7 @@
       </div>
       <div class="d-flex gap-2">
         {% if page > 1 %}
-        <a href="{{ url_for('technician.current_jobs', page=page - 1) }}" class="jf-btn ghost" style="padding:.4rem .875rem;font-size:.8125rem;">
+        <a href="{{ url_for('technician.current_jobs', tab=tab, page=page - 1) }}" class="jf-btn ghost" style="padding:.4rem .875rem;font-size:.8125rem;">
           <i class="ti ti-chevron-left"></i> Previous
         </a>
         {% endif %}
@@ -248,14 +287,14 @@
           {% if p == page %}
           <span class="jf-btn primary" style="padding:.4rem .875rem;font-size:.8125rem;cursor:default;">{{ p }}</span>
           {% elif p == 1 or p == total_pages or (p >= page - 1 and p <= page + 1) %}
-          <a href="{{ url_for('technician.current_jobs', page=p) }}" class="jf-btn ghost" style="padding:.4rem .875rem;font-size:.8125rem;">{{ p }}</a>
+          <a href="{{ url_for('technician.current_jobs', tab=tab, page=p) }}" class="jf-btn ghost" style="padding:.4rem .875rem;font-size:.8125rem;">{{ p }}</a>
           {% elif p == page - 2 or p == page + 2 %}
           <span style="padding:.4rem .25rem;font-size:.8125rem;color:#94a3b8;">…</span>
           {% endif %}
         {% endfor %}
 
         {% if page < total_pages %}
-        <a href="{{ url_for('technician.current_jobs', page=page + 1) }}" class="jf-btn ghost" style="padding:.4rem .875rem;font-size:.8125rem;">
+        <a href="{{ url_for('technician.current_jobs', tab=tab, page=page + 1) }}" class="jf-btn ghost" style="padding:.4rem .875rem;font-size:.8125rem;">
           Next <i class="ti ti-chevron-right"></i>
         </a>
         {% endif %}

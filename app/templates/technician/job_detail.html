@@ -276,6 +276,54 @@
         {% endif %}
       </div>
 
+      {% if data.is_estimate %}
+      {% set actual = data.total_cost|float %}
+      {% set est_min = data.estimated_min|float %}
+      {% set est_max = data.estimated_max|float %}
+      {% set variance = actual - est_max %}
+      <div class="jf-card mb-3 jf-animate d4">
+        <div class="jf-card-header orange">
+          <div class="header-icon"><i class="ti ti-file-text"></i></div>
+          Estimate vs Actual
+          {% if data.is_pending_estimate %}
+          <span class="ms-auto" style="font-size:.75rem;font-weight:600;opacity:.85;">Pending approval</span>
+          {% endif %}
+        </div>
+        <div class="jf-card-body">
+          <div class="row g-3">
+            <div class="col-sm-4">
+              <div class="jf-info-label">Estimate Low</div>
+              <div style="font-size:1.125rem;font-weight:700;color:#1e293b;">{{ currency_symbol }}{{ "%.2f"|format(est_min) }}</div>
+              <div class="text-muted" style="font-size:.75rem;">Services + parts</div>
+            </div>
+            <div class="col-sm-4">
+              <div class="jf-info-label">Estimate High (Cap)</div>
+              <div style="font-size:1.125rem;font-weight:700;color:var(--jf-orange);">{{ currency_symbol }}{{ "%.2f"|format(est_max) }}</div>
+              <div class="text-muted" style="font-size:.75rem;">+ {{ currency_symbol }}{{ "%.2f"|format(data.contingency_amount|float) }} buffer</div>
+            </div>
+            <div class="col-sm-4">
+              <div class="jf-info-label">Actual</div>
+              <div style="font-size:1.125rem;font-weight:700;color:#1e293b;">{{ currency_symbol }}{{ "%.2f"|format(actual) }}</div>
+              {% if actual %}
+              <div style="font-size:.75rem;font-weight:600;color:{{ 'var(--jf-green)' if variance <= 0 else 'var(--jf-orange)' }};">
+                {% if variance < 0 %}{{ currency_symbol }}{{ "%.2f"|format(-variance) }} under cap
+                {% elif variance == 0 %}On cap
+                {% else %}{{ currency_symbol }}{{ "%.2f"|format(variance) }} over cap
+                {% endif %}
+              </div>
+              {% endif %}
+            </div>
+          </div>
+          {% if data.contingency_note %}
+          <div class="mt-3" style="padding:.625rem .875rem;background:#f8fafc;border-left:3px solid var(--jf-orange);border-radius:6px;">
+            <div class="jf-info-label">Buffer covers</div>
+            <div style="font-size:.875rem;color:#475569;">{{ data.contingency_note }}</div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
       <!-- Grand total -->
       <div class="jf-animate d4">
         <div class="jf-cost-box">
