@@ -180,12 +180,20 @@ def login():
 @auth_bp.route('/callback')
 def callback():
     """
-    OAuth callback handler for Neon Auth
-    Users are redirected here after OAuth sign-in (e.g. Google via Neon Auth)
+    OAuth callback handler for Neon Auth.
+
+    Two scenarios land here:
+      1. Direct landing with a Better Auth session cookie or a `?token=` query
+         (browsers that allow third-party cookies for the auth domain).
+      2. Better Auth's oauth-proxy redirect with `?neon_auth_session_verifier=<v>`
+         (Safari / Brave / Firefox strict — cookies on the auth domain aren't
+         reachable cross-site). In that case we redirect the browser to
+         Better Auth's `/callback/oauth-proxy` endpoint, which decrypts the
+         verifier server-side and forwards back here with the actual session
+         token appended to the URL.
     """
     try:
         session_token = request.cookies.get('better-auth.session_token')
-
         if not session_token:
             session_token = request.args.get('token')
 
@@ -197,6 +205,25 @@ def callback():
                 auth_service.establish_session(user)
                 redirect_url = auth_service.resolve_post_auth_redirect(user.user_id)
                 return redirect(redirect_url)
+
+        # Verifier path — exchange via Better Auth's oauth-proxy callback.
+        verifier = request.args.get('neon_auth_session_verifier')
+        if verifier:
+            auth_url = (current_app.config.get('NEON_AUTH_URL') or '').rstrip('/')
+            if auth_url:
+                from urllib.parse import urlencode
+                # Final return URL: same callback minus the verifier so this branch
+                # doesn't loop. Better Auth will append the session token.
+                final_callback = url_for('auth.callback', _external=True)
+                proxy_url = (
+                    f"{auth_url}/callback/oauth-proxy?"
+                    + urlencode({
+                        'neon_auth_session_verifier': verifier,
+                        'callbackURL': final_callback,
+                    })
+                )
+                logger.info("OAuth callback: forwarding verifier to Better Auth oauth-proxy")
+                return redirect(proxy_url)
 
         # No server-side token available — render bridge page that fetches
         # the session from Neon Auth client-side and forwards to Flask
