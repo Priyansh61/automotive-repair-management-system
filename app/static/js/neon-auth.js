@@ -227,12 +227,28 @@ class NeonAuthClient {
             const cleanUrl = window.location.pathname || '/';
             window.history.replaceState({}, '', cleanUrl);
 
-            // Get full session from Neon Auth (includes user data)
+            // Strategy 1: send the verifier directly as the token.
+            // The backend validates it server-side against Neon Auth (no cross-origin
+            // cookie restrictions). This is the correct path for Safari / browsers
+            // that block third-party cookies (ITP).
+            const directResponse = await fetch('/auth/neon-callback', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: verifier }),
+                credentials: 'include'
+            });
+
+            if (directResponse.ok) {
+                const data = await directResponse.json();
+                window.location.href = data.redirect || '/dashboard';
+                return true;
+            }
+
+            // Strategy 2: cross-origin session fetch (works in non-ITP browsers).
             const fullSession = await this._getFullSession();
             const token = fullSession && fullSession.session ? fullSession.session.token : null;
             const userData = fullSession ? fullSession.user : null;
 
-            // POST to Flask with token + user data
             const payload = {};
             if (token) payload.token = token;
             if (userData) payload.user = userData;
